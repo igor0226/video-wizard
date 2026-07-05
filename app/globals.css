@@ -1,0 +1,330 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 222 29% 8%;
+  --foreground: 220 27% 96%;
+  --card: 224 34% 14%;
+  --card-foreground: 220 27% 96%;
+  --popover: 224 34% 14%;
+  --popover-foreground: 220 27% 96%;
+  --primary: 224 68% 66%;
+  --primary-foreground: 220 27% 96%;
+  --secondary: 223 30% 22%;
+  --secondary-foreground: 220 27% 96%;
+  --muted: 221 24% 20%;
+  --muted-foreground: 217 26% 75%;
+  --accent: 224 36% 28%;
+  --accent-foreground: 220 27% 96%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 223 23% 24%;
+  --input: 223 23% 24%;
+  --ring: 224 68% 66%;
+  --radius: 0.75rem;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #f4f6fb;
+  background: #0f1219;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #0f1219;
+}
+
+.appShell {
+  min-height: 100vh;
+  padding: 18px;
+}
+
+.appHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #2b3242;
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+  background: #151b27;
+}
+
+.appHeader h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.uploadButton {
+  border: 1px solid #495979;
+  border-radius: 10px;
+  background: #212c43;
+  color: #f4f6fb;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.appBody {
+  border: 1px solid #2b3242;
+  border-radius: 0 0 16px 16px;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 78vh;
+  background: #131925;
+}
+
+.videoSidebar {
+  border-right: 1px solid #2b3242;
+  padding: 16px;
+}
+
+.videoSidebar h2 {
+  margin-top: 0;
+  font-size: 18px;
+}
+
+.videoSidebar ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.videoListItem {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #f4f6fb;
+  padding: 10px;
+  cursor: pointer;
+  text-align: left !important;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.videoListItem small {
+  text-transform: uppercase;
+  color: #9fb2d8;
+  font-size: 11px;
+}
+
+.videoListItem[data-state="on"],
+.videoListItem:hover {
+  border-color: #4b5563;
+  background: rgb(63 63 70 / 0.35);
+}
+
+.mainContent {
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.videoTitle {
+  margin: 2px 0 0;
+}
+
+.playerPanel,
+.metaPanel {
+  border: 1px solid #2f3a54;
+  border-radius: 12px;
+  padding: 14px;
+  background: #171f30;
+}
+
+.videoElement {
+  width: 100%;
+  max-height: 420px;
+  background: #000;
+  border-radius: 8px;
+}
+
+.videoPlaceholder {
+  width: 100%;
+  min-height: 260px;
+  border: 1px dashed #415172;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 16px;
+  color: #bbcae7;
+  background: #121a2a;
+}
+
+.metaPanel ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.playbackInfo,
+.note {
+  color: #bbcae7;
+}
+
+.playPauseButton {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #5f76aa;
+  background: #283858;
+  color: #f4f6fb;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.playPauseButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.playPauseButton svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.customTimeline {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.customTimeline input[type="range"] {
+  width: 100%;
+}
+
+.timelineSlider {
+  position: relative;
+}
+
+.timelineRange {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid #3c4a6a;
+  cursor: pointer;
+}
+
+.timelineRange::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 0;
+  background: #f4f6fb;
+}
+
+.timelineRange::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 0;
+  background: #f4f6fb;
+}
+
+.timelineLabel {
+  font-variant-numeric: tabular-nums;
+  color: #bbcae7;
+  font-size: 13px;
+}
+
+.timelineBufferedLabel {
+  color: #aab4c8;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.errorText {
+  color: #ffb4b4;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(9 12 18 / 60%);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.modalCard {
+  width: min(500px, 100%);
+  border: 1px solid #394562;
+  border-radius: 12px;
+  background: #182235;
+  padding: 16px;
+}
+
+.uploadForm {
+  display: grid;
+  gap: 12px;
+}
+
+.uploadForm label {
+  display: grid;
+  gap: 6px;
+}
+
+.uploadForm input[type="text"],
+.uploadForm input[type="file"] {
+  border: 1px solid #4b5f8e;
+  border-radius: 8px;
+  background: #121a29;
+  color: #f4f6fb;
+  padding: 8px;
+}
+
+.uploadForm progress {
+  width: 100%;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.formActions button {
+  border: 1px solid #4b5f8e;
+  border-radius: 8px;
+  background: #1f2d46;
+  color: #f4f6fb;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .appBody {
+    grid-template-columns: 1fr;
+  }
+
+  .videoSidebar {
+    border-right: 0;
+    border-bottom: 1px solid #2b3242;
+  }
+}
