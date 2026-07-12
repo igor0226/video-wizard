@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 
-export const metadata: Metadata = {
+export const metadata: any = {
 	title: "Video Streaming Player",
 	description: "Local MP4 timeline streaming with custom controls",
 };
