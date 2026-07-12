@@ -3,6 +3,9 @@
 ## Goal
 This app allows users to upload their videos, see the list of them, and watch the proecessed videos with DASH technology.
 
+## Agent prerequisites
+- **Hard rule** always run `nvm use` to make sure you are using the required Node JS version.
+
 ## Tech Stack
 - npm as a package manager
 - Next.js 14 App Router
@@ -63,5 +66,6 @@ This app allows users to upload their videos, see the list of them, and watch th
 - First look up for ready-to-go `shadcn` components before implementing your own ones
 
 ## Verification
-**Hard rule**  To make sure your changes are OK, run `npm run typecheck && npm run lint`
+- **Hard rule** Before commiting, make sure to format you code with `npm run lint:fix`
+- **Hard rule** To make sure your changes are OK, run `npm run typecheck && npm run lint`
 

@@ -1,20 +1,12 @@
+import Link from "next/link";
 import { Button } from "../../components/ui/button";
 
-type AppHeaderProps = {
-	onUploadClick: () => void;
-};
-
-export function AppHeader({ onUploadClick }: AppHeaderProps) {
+export function AppHeader() {
 	return (
 		<header className="appHeader">
 			<h1>Video Processing Service</h1>
-			<Button
-				type="button"
-				variant="secondary"
-				className="uploadButton"
-				onClick={onUploadClick}
-			>
-				Upload a new video
+			<Button asChild variant="secondary" className="uploadButton">
+				<Link href="/tasks/new">Upload a new video</Link>
 			</Button>
 		</header>
 	);

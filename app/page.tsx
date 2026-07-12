@@ -1,17 +1,11 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	type FormEvent,
-	useCallback,
-	useEffect,
-	useMemo,
-	useState,
-} from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
 import { MetadataPanel } from "./components/MetadataPanel";
 import { PlayerPanel } from "./components/PlayerPanel";
-import { UploadModal } from "./components/UploadModal";
 import { VideoSidebar } from "./components/VideoSidebar";
 import { useDashPlayer } from "./hooks/useDashPlayer";
 import type { VideoStatusResponse, VideosResponse } from "./types/video";
@@ -32,16 +26,11 @@ async function fetchVideoStatus(videoId: string): Promise<VideoStatusResponse> {
 	return response.json() as Promise<VideoStatusResponse>;
 }
 
-export default function HomePage() {
+function HomePageContent() {
 	const queryClient = useQueryClient();
+	const searchParams = useSearchParams();
+	const videoFromUrl = searchParams.get("video");
 	const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
-
-	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-	const [uploadTitle, setUploadTitle] = useState("");
-	const [uploadFile, setUploadFile] = useState<File | null>(null);
-	const [uploadProgress, setUploadProgress] = useState(0);
-	const [isUploading, setIsUploading] = useState(false);
-	const [uploadError, setUploadError] = useState<string | null>(null);
 
 	const videosQuery = useQuery({
 		queryKey: ["videos"],
@@ -56,13 +45,18 @@ export default function HomePage() {
 	);
 
 	useEffect(() => {
+		if (videoFromUrl && videos.some((video) => video.id === videoFromUrl)) {
+			setSelectedVideoId(videoFromUrl);
+			return;
+		}
+
 		setSelectedVideoId((previous) => {
 			if (previous && videos.some((video) => video.id === previous)) {
 				return previous;
 			}
 			return videos[0]?.id ?? null;
 		});
-	}, [videos]);
+	}, [videoFromUrl, videos]);
 
 	const statusQuery = useQuery({
 		queryKey: ["video-status", selectedVideoId],
@@ -120,68 +114,13 @@ export default function HomePage() {
 		playerError,
 	} = useDashPlayer(selectedVideo);
 
-	const submitUpload = useCallback(
-		(event: FormEvent<HTMLFormElement>) => {
-			event.preventDefault();
-
-			if (!uploadFile) {
-				setUploadError("Choose a video file first.");
-				return;
-			}
-			if (!uploadTitle.trim()) {
-				setUploadError("Enter a video name.");
-				return;
-			}
-
-			const formData = new FormData();
-			formData.set("title", uploadTitle);
-			formData.set("file", uploadFile);
-
-			setUploadError(null);
-			setIsUploading(true);
-			setUploadProgress(0);
-
-			const xhr = new XMLHttpRequest();
-			xhr.open("POST", "/api/videos/upload");
-			xhr.upload.onprogress = (progressEvent) => {
-				if (progressEvent.lengthComputable) {
-					setUploadProgress((progressEvent.loaded / progressEvent.total) * 100);
-				}
-			};
-
-			xhr.onerror = () => {
-				setIsUploading(false);
-				setUploadError("Upload failed due to a network issue.");
-			};
-
-			xhr.onload = async () => {
-				setIsUploading(false);
-				if (xhr.status < 200 || xhr.status >= 300) {
-					setUploadError(xhr.responseText || "Upload failed.");
-					return;
-				}
-
-				const responsePayload = JSON.parse(xhr.responseText) as { id: string };
-				setSelectedVideoId(responsePayload.id);
-				setUploadTitle("");
-				setUploadFile(null);
-				setUploadProgress(100);
-				setIsUploadModalOpen(false);
-				await queryClient.invalidateQueries({ queryKey: ["videos"] });
-			};
-
-			xhr.send(formData);
-		},
-		[queryClient, uploadFile, uploadTitle],
-	);
-
 	const combinedError =
 		(videosQuery.error as Error | null)?.message ?? playerError;
 	const canSeek = Boolean(selectedVideo?.playable && videoRef.current);
 
 	return (
 		<main className="appShell">
-			<AppHeader onUploadClick={() => setIsUploadModalOpen(true)} />
+			<AppHeader />
 
 			<section className="appBody">
 				<VideoSidebar
@@ -253,19 +192,21 @@ export default function HomePage() {
 					{combinedError ? <p className="errorText">{combinedError}</p> : null}
 				</section>
 			</section>
-
-			<UploadModal
-				isOpen={isUploadModalOpen}
-				uploadTitle={uploadTitle}
-				uploadProgress={uploadProgress}
-				isUploading={isUploading}
-				uploadError={uploadError}
-				selectedFileName={uploadFile?.name ?? null}
-				onClose={() => setIsUploadModalOpen(false)}
-				onTitleChange={setUploadTitle}
-				onFileChange={setUploadFile}
-				onSubmit={submitUpload}
-			/>
 		</main>
+	);
+}
+
+export default function HomePage() {
+	return (
+		<Suspense
+			fallback={
+				<main className="appShell">
+					<AppHeader />
+					<p className="note">Loading...</p>
+				</main>
+			}
+		>
+			<HomePageContent />
+		</Suspense>
 	);
 }
