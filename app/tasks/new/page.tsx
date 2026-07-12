@@ -21,8 +21,8 @@ import { useVideoUpload } from "../../hooks/useVideoUpload";
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"] as const;
 
 export default function NewVideoPage() {
-	const router = useRouter();
 	const queryClient = useQueryClient();
+	const router = useRouter();
 	const { uploadVideo, uploadProgress, isUploading, uploadError } =
 		useVideoUpload();
 
