@@ -15,7 +15,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../../components/ui/select";
-import { NewVideoPageHeader } from "../../components/NewVideoPageHeader";
+import { AppPageHeader } from "../../components/AppPageHeader";
 import { useVideoUpload } from "../../hooks/useVideoUpload";
 
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"] as const;
@@ -41,15 +41,21 @@ export default function NewVideoPage() {
 		try {
 			const videoId = await uploadVideo({ title, file });
 			await queryClient.invalidateQueries({ queryKey: ["videos"] });
-			router.push(`/?video=${videoId}`);
+			router.push(`/tasks/${videoId}`);
 		} catch {
 			// Error state is handled inside useVideoUpload.
 		}
 	};
 
 	return (
-		<main className="newVideoPage">
-			<NewVideoPageHeader />
+		<main className="tasksPage">
+			<AppPageHeader
+				breadcrumbs={[
+					{ label: "Home", href: "/" },
+					{ label: "Tasks", href: "/" },
+					{ label: "New video" },
+				]}
+			/>
 
 			<form className="newVideoForm" onSubmit={handleSubmit}>
 				<div className="newVideoField">

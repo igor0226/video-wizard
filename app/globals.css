@@ -268,7 +268,7 @@ body {
 	color: #ffb4b4;
 }
 
-.newVideoPage {
+.tasksPage {
 	--background: 0 0% 100%;
 	--foreground: 0 0% 9%;
 	--card: 0 0% 100%;
@@ -293,28 +293,185 @@ body {
 	padding: 40px 48px;
 }
 
-.newVideoPageHeader {
+.tasksPageHeader {
 	display: grid;
 	gap: 20px;
-	margin-bottom: 40px;
+	margin-bottom: 32px;
 }
 
-.newVideoPageHeaderTop {
+.tasksPageHeaderTop {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
 }
 
-.newVideoPageHeaderTop h1 {
+.tasksPageHeaderTop h1 {
 	margin: 0;
 	font-size: 28px;
 	font-weight: 700;
 	line-height: 1.2;
 }
 
-.newVideoBreadcrumb {
+.tasksPageBreadcrumb {
 	margin: 0;
+}
+
+.tasksPageContent {
+	display: grid;
+	gap: 16px;
+}
+
+.tasksToolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.tasksToolbarFilters {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.tasksSearchInput {
+	position: relative;
+	width: min(320px, 100%);
+}
+
+.tasksSearchIcon {
+	position: absolute;
+	left: 10px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 16px;
+	height: 16px;
+	color: #737373;
+	pointer-events: none;
+}
+
+.tasksSearchField {
+	padding-left: 34px;
+}
+
+.tasksStatusButton {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.tasksStatusPopover {
+	width: 220px;
+}
+
+.tasksStatusOptions {
+	display: grid;
+	gap: 12px;
+}
+
+.tasksStatusOption {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.tasksTableWrap {
+	border: 1px solid hsl(var(--border));
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.tasksTableRow {
+	cursor: pointer;
+}
+
+.tasksTableRowFocused {
+	outline: 2px solid #2563eb;
+	outline-offset: -2px;
+}
+
+.tasksSortHeader {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.tasksSortIcons {
+	display: inline-flex;
+	align-items: center;
+}
+
+.tasksStatusCell {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.tasksEmptyCell {
+	text-align: center;
+	color: #737373;
+	padding: 32px;
+}
+
+.tasksPagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding-top: 8px;
+}
+
+.tasksPaginationSelection {
+	margin: 0;
+	font-size: 14px;
+	color: #737373;
+}
+
+.tasksPaginationControls {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.tasksPaginationPageSize {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 14px;
+}
+
+.tasksPageSizeSelect {
+	width: 72px;
+}
+
+.tasksPaginationPageLabel {
+	font-size: 14px;
+	color: #737373;
+}
+
+.tasksPaginationButtons {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.tasksPageError {
+	margin: 0;
+	color: #dc2626;
+	font-size: 14px;
+}
+
+.tasksDetailContent {
+	display: grid;
+	gap: 16px;
+	max-width: 960px;
+}
+
+.tasksDetailTitle {
+	margin: 0;
+	font-size: 22px;
 }
 
 .newVideoForm {
