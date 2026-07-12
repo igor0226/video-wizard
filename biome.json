@@ -21,13 +21,18 @@
 					"options": {
 						"ignore": ["tailwind"]
 					}
-				}
+				},
+				"noExplicitAny": "error"
+			},
+			"correctness": {
+				"noUnusedImports": "error"
 			}
 		}
 	},
 	"javascript": {
 		"formatter": {
-			"quoteStyle": "double"
+			"quoteStyle": "double",
+			"semicolons": "always"
 		}
 	},
 	"css": {
