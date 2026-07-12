@@ -1,9 +1,10 @@
 # Video Streaming Project: Agent Notes
 
 ## Goal
-Ship features for a local video processing + DASH playback app with minimal regressions.
+This app allows users to upload their videos, see the list of them, and watch the proecessed videos with DASH technology.
 
 ## Tech Stack
+- npm as a package manager
 - Next.js 14 App Router
 - React 18 + TypeScript
 - TanStack Query (client data fetching)
@@ -58,10 +59,9 @@ Ship features for a local video processing + DASH playback app with minimal regr
 - Keep worker idempotent and lock-safe (avoid duplicate processing).
 - Return explicit failure reasons for processing errors.
 
-## Useful Commands
-- Dev: `npm run dev`
-- Build/type-check: `npm run build`
+## UI constraints
+- First look up for ready-to-go `shadcn` components before implementing your own ones
 
-## Known Environment Quirk
-- If Next build reports random `PageNotFoundError` for existing API routes, clear cache and rebuild:
-  - `rm -rf .next && npm run build`
+## Verification
+**Hard rule**  To make sure your changes are OK, run `npm run typecheck && npm run lint`
+

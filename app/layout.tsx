@@ -3,18 +3,18 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Video Streaming Player",
-  description: "Local MP4 timeline streaming with custom controls"
+	title: "Video Streaming Player",
+	description: "Local MP4 timeline streaming with custom controls",
 };
 
 export default function RootLayout({
-  children
+	children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
-      </body>
-    </html>
-  );
+	return (
+		<html lang="en">
+			<body>
+				<Providers>{children}</Providers>
+			</body>
+		</html>
+	);
 }
