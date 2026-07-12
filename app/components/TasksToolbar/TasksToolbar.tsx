@@ -2,15 +2,16 @@
 
 import { CirclePlus, Search } from "lucide-react";
 import Link from "next/link";
-import { Button } from "../../components/ui/button";
-import { Checkbox } from "../../components/ui/checkbox";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
+import { Button } from "../../../components/ui/button";
+import { Checkbox } from "../../../components/ui/checkbox";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-} from "../../components/ui/popover";
+} from "../../../components/ui/popover";
+import "./TasksToolbar.css";
 
 export type StatusFilterKey = "completed" | "inProgress" | "failed";
 
@@ -67,9 +68,7 @@ export function TasksToolbar({
 											onStatusFilterChange(option.key, checked === true)
 										}
 									/>
-									<Label htmlFor={`status-${option.key}`}>
-										{option.label}
-									</Label>
+									<Label htmlFor={`status-${option.key}`}>{option.label}</Label>
 								</div>
 							))}
 						</div>

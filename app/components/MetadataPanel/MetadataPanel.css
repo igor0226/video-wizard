@@ -1,0 +1,7 @@
+.metaPanel {
+	@apply border border-border rounded-lg p-3.5 bg-card;
+}
+
+.metaPanel ul {
+	@apply m-0 grid gap-2;
+}

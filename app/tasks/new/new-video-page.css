@@ -1,0 +1,27 @@
+.newVideoForm {
+	@apply grid gap-6 max-w-[640px];
+}
+
+.newVideoField {
+	@apply grid gap-2;
+}
+
+.newVideoField label {
+	@apply text-sm font-normal text-foreground;
+}
+
+.newVideoFileInput {
+	@apply cursor-pointer px-2 py-1.5;
+}
+
+.newVideoProgress {
+	@apply h-1 rounded-none;
+}
+
+.newVideoError {
+	@apply m-0 text-destructive text-sm;
+}
+
+.newVideoActions {
+	@apply flex justify-start;
+}

@@ -1,6 +1,6 @@
 import { User } from "lucide-react";
 import Link from "next/link";
-import { Avatar, AvatarFallback } from "../../components/ui/avatar";
+import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -8,7 +8,8 @@ import {
 	BreadcrumbList,
 	BreadcrumbPage,
 	BreadcrumbSeparator,
-} from "../../components/ui/breadcrumb";
+} from "../../../components/ui/breadcrumb";
+import "./AppPageHeader.css";
 
 export type AppPageBreadcrumb = {
 	label: string;

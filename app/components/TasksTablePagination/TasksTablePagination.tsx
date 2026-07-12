@@ -6,14 +6,15 @@ import {
 	ChevronLeft,
 	ChevronRight,
 } from "lucide-react";
-import { Button } from "../../components/ui/button";
+import { Button } from "../../../components/ui/button";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "../../components/ui/select";
+} from "../../../components/ui/select";
+import "./TasksTablePagination.css";
 
 type TasksTablePaginationProps = {
 	totalRows: number;

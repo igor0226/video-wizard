@@ -7,14 +7,14 @@ import {
 	MoreHorizontal,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "../../components/ui/button";
-import { Checkbox } from "../../components/ui/checkbox";
+import { Button } from "../../../components/ui/button";
+import { Checkbox } from "../../../components/ui/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
+} from "../../../components/ui/dropdown-menu";
 import {
 	Table,
 	TableBody,
@@ -22,11 +22,12 @@ import {
 	TableHead,
 	TableHeader,
 	TableRow,
-} from "../../components/ui/table";
-import { cn } from "../../lib/utils";
-import { formatCreatedAt, formatTaskId } from "../lib/format";
-import { getTaskStatusLabel, TaskStatusIcon } from "../lib/task-status";
-import type { VideoItem } from "../types/video";
+} from "../../../components/ui/table";
+import { cn } from "../../../lib/utils";
+import { formatCreatedAt, formatTaskId } from "../../lib/format";
+import { getTaskStatusLabel, TaskStatusIcon } from "../../lib/task-status";
+import type { VideoItem } from "../../types/video";
+import "./TasksTable.css";
 
 type TasksTableProps = {
 	videos: VideoItem[];
@@ -91,7 +92,9 @@ export function TasksTable({
 					<TableRow>
 						<TableHead className="w-10">
 							<Checkbox
-								checked={allSelected || (someSelected ? "indeterminate" : false)}
+								checked={
+									allSelected || (someSelected ? "indeterminate" : false)
+								}
 								onCheckedChange={(checked) => toggleAll(checked === true)}
 								aria-label="Select all tasks"
 							/>

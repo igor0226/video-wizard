@@ -1,0 +1,35 @@
+.tasksToolbar {
+	@apply flex items-center justify-between gap-4;
+}
+
+.tasksToolbarFilters {
+	@apply flex items-center gap-3 flex-wrap;
+}
+
+.tasksSearchInput {
+	@apply relative w-full max-w-[320px];
+}
+
+.tasksSearchIcon {
+	@apply absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none;
+}
+
+.tasksSearchField {
+	@apply pl-[34px];
+}
+
+.tasksStatusButton {
+	@apply inline-flex items-center gap-2;
+}
+
+.tasksStatusPopover {
+	@apply w-[220px];
+}
+
+.tasksStatusOptions {
+	@apply grid gap-3;
+}
+
+.tasksStatusOption {
+	@apply flex items-center gap-2;
+}

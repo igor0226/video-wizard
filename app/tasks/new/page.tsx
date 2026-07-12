@@ -15,8 +15,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../../components/ui/select";
-import { AppPageHeader } from "../../components/AppPageHeader";
+import { AppPageHeader } from "../../components/AppPageHeader/AppPageHeader";
 import { useVideoUpload } from "../../hooks/useVideoUpload";
+import "../../styles/tasks-page.css";
+import "./new-video-page.css";
 
 const PRIORITY_OPTIONS = ["Low", "Medium", "High"] as const;
 

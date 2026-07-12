@@ -2,13 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { AppPageHeader } from "./components/AppPageHeader";
-import { TasksTable } from "./components/TasksTable";
-import { TasksTablePagination } from "./components/TasksTablePagination";
+import { AppPageHeader } from "./components/AppPageHeader/AppPageHeader";
+import { TasksTable } from "./components/TasksTable/TasksTable";
+import { TasksTablePagination } from "./components/TasksTablePagination/TasksTablePagination";
 import {
 	type StatusFilterKey,
 	TasksToolbar,
-} from "./components/TasksToolbar";
+} from "./components/TasksToolbar/TasksToolbar";
+import "./styles/tasks-page.css";
 import type { VideosResponse } from "./types/video";
 
 async function fetchVideos(): Promise<VideosResponse> {
@@ -65,10 +66,7 @@ export default function HomePage() {
 	return (
 		<main className="tasksPage">
 			<AppPageHeader
-				breadcrumbs={[
-					{ label: "Home", href: "/" },
-					{ label: "Tasks" },
-				]}
+				breadcrumbs={[{ label: "Home", href: "/" }, { label: "Tasks" }]}
 			/>
 
 			<section className="tasksPageContent">

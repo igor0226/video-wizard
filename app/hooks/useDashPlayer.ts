@@ -345,12 +345,7 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 			isActive = false;
 			releaseMediaResources();
 		};
-	}, [
-		videoId,
-		isPlayable,
-		initializeMediaSource,
-		releaseMediaResources,
-	]);
+	}, [videoId, isPlayable, initializeMediaSource, releaseMediaResources]);
 
 	const playerState = useMemo(
 		() => ({

@@ -3,10 +3,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo } from "react";
-import { AppPageHeader } from "../../components/AppPageHeader";
-import { MetadataPanel } from "../../components/MetadataPanel";
-import { PlayerPanel } from "../../components/PlayerPanel";
+import { AppPageHeader } from "../../components/AppPageHeader/AppPageHeader";
+import { MetadataPanel } from "../../components/MetadataPanel/MetadataPanel";
+import { PlayerPanel } from "../../components/PlayerPanel/PlayerPanel";
 import { useDashPlayer } from "../../hooks/useDashPlayer";
+import "../../styles/tasks-page.css";
 import type { VideoStatusResponse, VideosResponse } from "../../types/video";
 
 async function fetchVideos(): Promise<VideosResponse> {
@@ -112,10 +113,6 @@ export default function TaskDetailPage() {
 			/>
 
 			<section className="tasksDetailContent">
-				<h2 className="tasksDetailTitle">
-					{selectedVideo?.title ?? "Task not found"}
-				</h2>
-
 				<PlayerPanel
 					selectedVideo={selectedVideo}
 					videoRef={videoRef}
@@ -171,7 +168,9 @@ export default function TaskDetailPage() {
 					loadedSegmentCount={loadedSegmentCount}
 				/>
 
-				{combinedError ? <p className="tasksPageError">{combinedError}</p> : null}
+				{combinedError ? (
+					<p className="tasksPageError">{combinedError}</p>
+				) : null}
 			</section>
 		</main>
 	);
