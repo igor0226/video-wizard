@@ -7,16 +7,22 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'package.json'
+      - 'tsconfig.json'
 
 jobs:
-  base-checks:
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run typecheck
+      - uses: ./.github/actions/setup-node
       - run: npm run lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/setup-node
+      - run: npm run typecheck

@@ -1,0 +1,13 @@
+name: Setup Node
+description: Setup Node.js environment via nvm
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: '.nvmrc'
+        cache: 'npm'
+    - run: npm ci
+      shell: bash

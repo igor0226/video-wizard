@@ -1,5 +1,9 @@
 #!/bin/sh
 set -e
 
-npm run typecheck
-npm run lint
+npx lint-staged
+
+if git diff --cached --name-only | grep -Eq '\.(ts|tsx|js|jsx)$|tsconfig\.json|package\.json'; then
+  npm run typecheck
+  npm run lint
+fi
