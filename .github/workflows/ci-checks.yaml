@@ -13,17 +13,16 @@ on:
       - 'lib/**'
       - 'package.json'
       - 'tsconfig.json'
-      - '.github/**'
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: ../actions/setup-node
+      - uses: ./.github/actions/setup-node
       - run: npm run lint
 
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: ../actions/setup-node
+      - uses: ./.github/actions/setup-node
       - run: npm run typecheck
