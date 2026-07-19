@@ -17,6 +17,13 @@ type AppendQueueItem = {
 
 const BUFFER_SEGMENTS_AHEAD = 3;
 
+function isSourceBufferAttached(
+	mediaSource: MediaSource,
+	sourceBuffer: SourceBuffer,
+): boolean {
+	return Array.from(mediaSource.sourceBuffers).includes(sourceBuffer);
+}
+
 export function useDashPlayer(selectedVideo: VideoItem | null) {
 	const videoRef = useRef<HTMLVideoElement | null>(null);
 	const mediaSourceRef = useRef<MediaSource | null>(null);
@@ -27,6 +34,9 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 	const nextSegmentToFetchRef = useRef(0);
 	const desiredSegmentIndexRef = useRef(0);
 	const fetchInFlightRef = useRef(false);
+	const playbackSessionRef = useRef(0);
+	const onUpdateEndRef = useRef<(() => void) | null>(null);
+	const onSourceOpenRef = useRef<((event: Event) => void) | null>(null);
 
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
@@ -36,9 +46,37 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 	const [loadedSegmentCount, setLoadedSegmentCount] = useState(0);
 	const [playerError, setPlayerError] = useState<string | null>(null);
 
+	const isSessionActive = useCallback((session: number) => {
+		return session === playbackSessionRef.current;
+	}, []);
+
 	const releaseMediaResources = useCallback(() => {
+		playbackSessionRef.current += 1;
+		manifestRef.current = null;
+		fetchInFlightRef.current = false;
+		appendQueueRef.current = [];
+
 		const sourceBuffer = sourceBufferRef.current;
+		const mediaSource = mediaSourceRef.current;
 		const videoEl = videoRef.current;
+
+		if (sourceBuffer && onUpdateEndRef.current) {
+			try {
+				sourceBuffer.removeEventListener("updateend", onUpdateEndRef.current);
+			} catch {
+				// Ignore detached source buffer errors.
+			}
+			onUpdateEndRef.current = null;
+		}
+
+		if (mediaSource && onSourceOpenRef.current) {
+			try {
+				mediaSource.removeEventListener("sourceopen", onSourceOpenRef.current);
+			} catch {
+				// Ignore detached media source errors.
+			}
+			onSourceOpenRef.current = null;
+		}
 
 		if (sourceBuffer?.updating) {
 			try {
@@ -48,13 +86,11 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 			}
 		}
 
-		if (
-			mediaSourceRef.current &&
-			sourceBuffer &&
-			mediaSourceRef.current.sourceBuffers.length > 0
-		) {
+		if (mediaSource && sourceBuffer) {
 			try {
-				mediaSourceRef.current.removeSourceBuffer(sourceBuffer);
+				if (isSourceBufferAttached(mediaSource, sourceBuffer)) {
+					mediaSource.removeSourceBuffer(sourceBuffer);
+				}
 			} catch {
 				// Ignore detached source buffer errors.
 			}
@@ -62,7 +98,6 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 
 		sourceBufferRef.current = null;
 		mediaSourceRef.current = null;
-		appendQueueRef.current = [];
 
 		if (videoEl && streamUrlRef.current) {
 			videoEl.removeAttribute("src");
@@ -74,16 +109,29 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 
 	const flushQueue = useCallback(() => {
 		const sourceBuffer = sourceBufferRef.current;
-		if (!sourceBuffer || sourceBuffer.updating) {
+		const mediaSource = mediaSourceRef.current;
+		if (!sourceBuffer || !mediaSource || sourceBuffer.updating) {
 			return;
 		}
+
+		if (!isSourceBufferAttached(mediaSource, sourceBuffer)) {
+			sourceBufferRef.current = null;
+			appendQueueRef.current = [];
+			return;
+		}
+
 		const next = appendQueueRef.current.shift();
 		if (!next) {
 			return;
 		}
-		sourceBuffer.appendBuffer(next.data);
-		if (next.kind === "media") {
-			setLoadedSegmentCount((value) => value + 1);
+
+		try {
+			sourceBuffer.appendBuffer(next.data);
+			if (next.kind === "media") {
+				setLoadedSegmentCount((value) => value + 1);
+			}
+		} catch {
+			appendQueueRef.current = [];
 		}
 	}, []);
 
@@ -103,6 +151,7 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 			return;
 		}
 
+		const session = playbackSessionRef.current;
 		const manifest = manifestRef.current;
 		if (!manifest) {
 			return;
@@ -111,25 +160,35 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 		fetchInFlightRef.current = true;
 		try {
 			while (
+				isSessionActive(session) &&
 				nextSegmentToFetchRef.current < manifest.segments.length &&
 				nextSegmentToFetchRef.current <= desiredSegmentIndexRef.current
 			) {
 				const segment = manifest.segments[nextSegmentToFetchRef.current];
 				const bytes = await fetchSegmentBytes(segment.url);
+				if (!isSessionActive(session)) {
+					return;
+				}
+
 				appendQueueRef.current.push({ kind: "media", data: bytes });
 				flushQueue();
 				nextSegmentToFetchRef.current += 1;
 			}
 		} catch (caughtError) {
+			if (!isSessionActive(session)) {
+				return;
+			}
 			const message =
 				caughtError instanceof Error
 					? caughtError.message
 					: "Unable to fetch media segment";
 			setPlayerError(message);
 		} finally {
-			fetchInFlightRef.current = false;
+			if (isSessionActive(session)) {
+				fetchInFlightRef.current = false;
+			}
 		}
-	}, [fetchSegmentBytes, flushQueue]);
+	}, [fetchSegmentBytes, flushQueue, isSessionActive]);
 
 	const extendBufferForTime = useCallback(
 		(timeSeconds: number) => {
@@ -163,6 +222,8 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 			}
 
 			releaseMediaResources();
+			const session = playbackSessionRef.current;
+
 			setCurrentTime(0);
 			setTotalDuration(0);
 			setLoadedSegmentCount(0);
@@ -177,11 +238,18 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 			}
 
 			const manifestResponse = await fetch(`/api/dash/${videoId}/manifest`);
+			if (!isSessionActive(session)) {
+				return;
+			}
 			if (!manifestResponse.ok) {
 				throw new Error("Unable to load manifest for selected video");
 			}
 
 			const manifestText = await manifestResponse.text();
+			if (!isSessionActive(session)) {
+				return;
+			}
+
 			const manifest = parseDashManifest(manifestText, videoId);
 			manifestRef.current = manifest;
 			setTotalDuration(manifest.totalDurationSeconds);
@@ -202,30 +270,59 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 				initialSegmentIndex + BUFFER_SEGMENTS_AHEAD,
 			);
 
-			mediaSource.addEventListener("sourceopen", async () => {
-				if (mediaSourceRef.current?.readyState !== "open") {
+			const onSourceOpen = async () => {
+				if (!isSessionActive(session)) {
 					return;
 				}
+				if (mediaSourceRef.current !== mediaSource) {
+					return;
+				}
+				if (mediaSource.readyState !== "open") {
+					return;
+				}
+
 				const sourceBuffer = mediaSource.addSourceBuffer(
 					`${manifest.mimeType}; codecs="${manifest.codecs}"`,
 				);
 				sourceBuffer.mode = "segments";
 				sourceBufferRef.current = sourceBuffer;
-				sourceBuffer.addEventListener("updateend", () => {
+
+				const onUpdateEnd = () => {
+					if (!isSessionActive(session)) {
+						return;
+					}
 					flushQueue();
-				});
+				};
+				onUpdateEndRef.current = onUpdateEnd;
+				sourceBuffer.addEventListener("updateend", onUpdateEnd);
 
 				const initBytes = await fetchSegmentBytes(manifest.initializationUrl);
+				if (!isSessionActive(session)) {
+					return;
+				}
+
 				appendQueueRef.current.push({ kind: "init", data: initBytes });
 				flushQueue();
 				void fetchSegments();
-			});
+			};
+
+			onSourceOpenRef.current = onSourceOpen;
+			mediaSource.addEventListener("sourceopen", onSourceOpen);
 		},
-		[fetchSegmentBytes, fetchSegments, flushQueue, releaseMediaResources],
+		[
+			fetchSegmentBytes,
+			fetchSegments,
+			flushQueue,
+			isSessionActive,
+			releaseMediaResources,
+		],
 	);
 
+	const videoId = selectedVideo?.id ?? null;
+	const isPlayable = Boolean(selectedVideo?.playable);
+
 	useEffect(() => {
-		if (!selectedVideo?.playable) {
+		if (!isPlayable || !videoId) {
 			releaseMediaResources();
 			return;
 		}
@@ -233,7 +330,7 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 		let isActive = true;
 		setPlayerError(null);
 
-		void initializeMediaSource(selectedVideo.id, 0).catch((caughtError) => {
+		void initializeMediaSource(videoId, 0).catch((caughtError) => {
 			if (!isActive) {
 				return;
 			}
@@ -248,7 +345,7 @@ export function useDashPlayer(selectedVideo: VideoItem | null) {
 			isActive = false;
 			releaseMediaResources();
 		};
-	}, [initializeMediaSource, releaseMediaResources, selectedVideo]);
+	}, [videoId, isPlayable, initializeMediaSource, releaseMediaResources]);
 
 	const playerState = useMemo(
 		() => ({

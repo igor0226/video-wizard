@@ -1,0 +1,27 @@
+.tasksPagination {
+	@apply flex items-center justify-between gap-4 pt-2;
+}
+
+.tasksPaginationSelection {
+	@apply m-0 text-sm text-muted-foreground;
+}
+
+.tasksPaginationControls {
+	@apply flex items-center gap-4;
+}
+
+.tasksPaginationPageSize {
+	@apply flex items-center gap-2 text-sm;
+}
+
+.tasksPageSizeSelect {
+	@apply w-[72px];
+}
+
+.tasksPaginationPageLabel {
+	@apply text-sm text-muted-foreground;
+}
+
+.tasksPaginationButtons {
+	@apply flex items-center gap-1;
+}

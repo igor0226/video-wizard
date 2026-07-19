@@ -1,0 +1,27 @@
+.tasksTableWrap {
+	@apply border border-border rounded-sm overflow-hidden;
+}
+
+.tasksTableRow {
+	@apply cursor-pointer;
+}
+
+.tasksTableRowFocused {
+	@apply outline outline-2 outline-ring -outline-offset-2;
+}
+
+.tasksSortHeader {
+	@apply flex items-center gap-1;
+}
+
+.tasksSortIcons {
+	@apply inline-flex items-center;
+}
+
+.tasksStatusCell {
+	@apply inline-flex items-center gap-2;
+}
+
+.tasksEmptyCell {
+	@apply text-center text-muted-foreground p-8;
+}

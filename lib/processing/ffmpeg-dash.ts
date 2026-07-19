@@ -1,7 +1,8 @@
+import type { VideoRecord } from "../storage";
 import { spawn } from "node:child_process";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
-import type { VideoRecord } from "../storage";
+
 import { blobStorage, getStoragePathsForVideo } from "../storage";
 
 function runProcess(command: string, args: string[]): Promise<void> {
@@ -71,6 +72,7 @@ export async function generateDashAssets(
 	];
 
 	try {
+		// biome-ignore lint: noConsole
 		console.info(
 			`[video-worker] stage=ffmpeg-run videoId=${video.id} output="${manifestAbsolutePath}"`,
 		);

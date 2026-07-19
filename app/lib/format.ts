@@ -31,3 +31,16 @@ export function formatBytes(sizeBytes: number): string {
 
 	return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
+
+export function formatTaskId(videoId: string): string {
+	return `TASK-${videoId.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
+}
+
+export function formatCreatedAt(iso: string): string {
+	const date = new Date(iso);
+	return date.toLocaleDateString("en-GB", {
+		day: "numeric",
+		month: "long",
+		year: "numeric",
+	});
+}

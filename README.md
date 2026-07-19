@@ -4,6 +4,7 @@ A local video processing and playback app built with Next.js.
 It accepts uploaded videos, transcodes them into DASH format with FFmpeg in a background worker, and plays ready streams in the browser via Media Source Extensions (MSE).
 
 ![Main page screenshot](readme/main.png)
+![Task list](readme/task-list.png)
 
 ## Purpose
 

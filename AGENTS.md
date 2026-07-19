@@ -3,6 +3,9 @@
 ## Goal
 This app allows users to upload their videos, see the list of them, and watch the proecessed videos with DASH technology.
 
+## Agent prerequisites
+- **Hard rule** always run `nvm use` to make sure you are using the required Node JS version.
+
 ## Tech Stack
 - npm as a package manager
 - Next.js 14 App Router
@@ -49,9 +52,13 @@ This app allows users to upload their videos, see the list of them, and watch th
 - `app/lib/dash.ts` -> MPD parsing + buffered calculations
 
 ## UI / Styling Notes
-- Keep custom layout CSS in `app/globals.css`.
 - Use `components/ui/*` primitives for controls/forms/dialogs/cards/sliders.
-- Theme tokens are defined in `:root`; prefer token-based colors over hardcoded values.
+- **Hard rule** Prioritize Tailwind theme tokens over hardcoded hex/rgb values for colors and spacing.
+- Theme tokens are defined in `:root` and mapped in `tailwind.config.js` (e.g. `background`, `foreground`, `card`, `border`, `muted-foreground`, `destructive`, `ring`).
+- In TSX, use Tailwind utility classes (`bg-card`, `text-muted-foreground`, `gap-2`, `p-4`).
+- In component CSS files, use `@apply` with Tailwind utilities, or `hsl(var(--token))` when `@apply` is impractical (e.g. nested pseudo-selectors).
+- Use Tailwind spacing/radius scales (`gap-2`, `p-3.5`, `rounded-lg`) instead of raw pixel values.
+- Page-level theme overrides (e.g. `.tasksPage`) may redefine CSS variables; child styles should still reference tokens, not hardcoded colors.
 
 ## Guardrails for New Features
 - Preserve global timeline behavior (`current/total`) and seamless chunk playback.
@@ -61,7 +68,9 @@ This app allows users to upload their videos, see the list of them, and watch th
 
 ## UI constraints
 - First look up for ready-to-go `shadcn` components before implementing your own ones
+- Place css in related css files, don't use a single file for that
 
 ## Verification
-**Hard rule**  To make sure your changes are OK, run `npm run typecheck && npm run lint`
+- **Hard rule** Before commiting, make sure to format you code with `npm run lint:fix`
+- **Hard rule** To make sure your changes are OK, run `npm run typecheck && npm run lint`
 

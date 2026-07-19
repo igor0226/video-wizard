@@ -3,9 +3,10 @@ import {
 	CardContent,
 	CardHeader,
 	CardTitle,
-} from "../../components/ui/card";
-import { formatBytes } from "../lib/format";
-import type { VideoItem } from "../types/video";
+} from "../../../components/ui/card";
+import { formatBytes } from "../../lib/format";
+import type { VideoItem } from "../../types/video";
+import "./MetadataPanel.css";
 
 type MetadataPanelProps = {
 	selectedVideo: VideoItem | null;

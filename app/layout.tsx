@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import "./globals.css";
+
 import { Providers } from "./providers";
 
+import "./globals.css";
+
 export const metadata: Metadata = {
-	title: "Video Streaming Player",
 	description: "Local MP4 timeline streaming with custom controls",
+	title: "Video Streaming Player",
 };
 
 export default function RootLayout({

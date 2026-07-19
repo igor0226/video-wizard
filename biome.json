@@ -16,18 +16,24 @@
 		"enabled": true,
 		"rules": {
 			"suspicious": {
+				"noConsole": "error",
 				"noUnknownAtRules": {
 					"level": "error",
 					"options": {
 						"ignore": ["tailwind"]
 					}
-				}
+				},
+				"noExplicitAny": "error"
+			},
+			"correctness": {
+				"noUnusedImports": "error"
 			}
 		}
 	},
 	"javascript": {
 		"formatter": {
-			"quoteStyle": "double"
+			"quoteStyle": "double",
+			"semicolons": "always"
 		}
 	},
 	"css": {
@@ -39,7 +45,19 @@
 		"enabled": true,
 		"actions": {
 			"source": {
-				"organizeImports": "on"
+				"organizeImports": {
+					"level": "on",
+					"options": {
+						"groups": [
+							{ "type": true },
+							[":BUN:", ":NODE:"],
+							":BLANK_LINE:",
+							":PACKAGE:",
+							":BLANK_LINE:",
+							":BLANK_LINE:"
+						]
+					}
+				}
 			}
 		}
 	}

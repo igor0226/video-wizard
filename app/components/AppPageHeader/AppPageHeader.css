@@ -1,0 +1,15 @@
+.tasksPageHeader {
+	@apply grid gap-5 mb-8;
+}
+
+.tasksPageHeaderTop {
+	@apply flex items-center justify-between gap-4;
+}
+
+.tasksPageHeaderTop h1 {
+	@apply m-0 text-[28px] font-bold leading-tight;
+}
+
+.tasksPageBreadcrumb {
+	@apply m-0;
+}

@@ -1,8 +1,9 @@
 import type { RefObject } from "react";
-import { Button } from "../../components/ui/button";
-import { Slider } from "../../components/ui/slider";
-import { formatTime } from "../lib/format";
-import type { VideoItem } from "../types/video";
+import { Button } from "../../../components/ui/button";
+import { Slider } from "../../../components/ui/slider";
+import { formatTime } from "../../lib/format";
+import type { VideoItem } from "../../types/video";
+import "./PlayerPanel.css";
 
 type PlayerPanelProps = {
 	selectedVideo: VideoItem | null;
