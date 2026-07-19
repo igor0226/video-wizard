@@ -1,5 +1,6 @@
 import { User } from "lucide-react";
 import Link from "next/link";
+
 import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
 import {
 	Breadcrumb,
