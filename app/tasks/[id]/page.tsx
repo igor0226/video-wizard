@@ -1,13 +1,15 @@
 "use client";
 
+import type { VideoStatusResponse, VideosResponse } from "../../types/video";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
 import { AppPageHeader } from "../../components/AppPageHeader/AppPageHeader";
 import { PlayerPanel } from "../../components/PlayerPanel/PlayerPanel";
+
 import "../../styles/tasks-page.css";
-import type { VideoStatusResponse, VideosResponse } from "../../types/video";
 
 async function fetchVideos(): Promise<VideosResponse> {
 	const response = await fetch("/api/videos");

@@ -1,3 +1,5 @@
+"use client";
+
 import type { VideoItem } from "../../types/video";
 
 import {
@@ -11,6 +13,7 @@ import {
 	DefaultVideoLayout,
 	defaultLayoutIcons,
 } from "@vidstack/react/player/layouts/default";
+import * as DASH from "dashjs";
 
 import "./PlayerPanel.css";
 
@@ -23,7 +26,7 @@ function onProviderChange(
 	_nativeEvent: MediaProviderChangeEvent,
 ) {
 	if (isDASHProvider(provider)) {
-		provider.library = () => import("dashjs");
+		provider.library = DASH;
 	}
 }
 
@@ -32,6 +35,7 @@ export function PlayerPanel({ selectedVideo }: PlayerPanelProps) {
 		<section className="playerPanel">
 			{selectedVideo?.playable ? (
 				<MediaPlayer
+					key={selectedVideo.id}
 					onProviderChange={onProviderChange}
 					src={`/api/dash/${selectedVideo.id}/manifest.mpd`}
 				>
