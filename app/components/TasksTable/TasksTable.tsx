@@ -1,5 +1,7 @@
 "use client";
 
+import type { VideoItem } from "../../types/video";
+
 import {
 	ArrowDown,
 	ArrowUp,
@@ -7,6 +9,7 @@ import {
 	MoreHorizontal,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+
 import { Button } from "../../../components/ui/button";
 import { Checkbox } from "../../../components/ui/checkbox";
 import {
@@ -26,7 +29,6 @@ import {
 import { cn } from "../../../lib/utils";
 import { formatCreatedAt, formatTaskId } from "../../lib/format";
 import { getTaskStatusLabel, TaskStatusIcon } from "../../lib/task-status";
-import type { VideoItem } from "../../types/video";
 import "./TasksTable.css";
 
 type TasksTableProps = {
