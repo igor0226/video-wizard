@@ -1,14 +1,15 @@
 "use client";
 
+import type { VideoStatusResponse, VideosResponse } from "../../types/video";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo } from "react";
+
 import { AppPageHeader } from "../../components/AppPageHeader/AppPageHeader";
-import { MetadataPanel } from "../../components/MetadataPanel/MetadataPanel";
 import { PlayerPanel } from "../../components/PlayerPanel/PlayerPanel";
-import { useDashPlayer } from "../../hooks/useDashPlayer";
+
 import "../../styles/tasks-page.css";
-import type { VideoStatusResponse, VideosResponse } from "../../types/video";
 
 async function fetchVideos(): Promise<VideosResponse> {
 	const response = await fetch("/api/videos");
@@ -80,27 +81,7 @@ export default function TaskDetailPage() {
 		});
 	}, [queryClient, videoId, statusQuery.data]);
 
-	const {
-		videoRef,
-		extendBufferForTime,
-		setIsPlaying,
-		setCurrentTime,
-		setBufferedSeconds,
-		setBufferedUntil,
-		getBufferedSeconds,
-		getBufferedUntil,
-		isPlaying,
-		currentTime,
-		totalDuration,
-		bufferedSeconds,
-		bufferedUntil,
-		loadedSegmentCount,
-		playerError,
-	} = useDashPlayer(selectedVideo);
-
-	const combinedError =
-		(videosQuery.error as Error | null)?.message ?? playerError;
-	const canSeek = Boolean(selectedVideo?.playable && videoRef.current);
+	const pageError = (videosQuery.error as Error | null)?.message ?? null;
 
 	return (
 		<main className="tasksPage">
@@ -113,64 +94,9 @@ export default function TaskDetailPage() {
 			/>
 
 			<section className="tasksDetailContent">
-				<PlayerPanel
-					selectedVideo={selectedVideo}
-					videoRef={videoRef}
-					isPlaying={isPlaying}
-					currentTime={currentTime}
-					totalDuration={totalDuration}
-					bufferedUntil={bufferedUntil}
-					canSeek={canSeek}
-					onPlay={() => setIsPlaying(true)}
-					onPause={() => setIsPlaying(false)}
-					onTogglePlay={() => {
-						const videoEl = videoRef.current;
-						if (!videoEl || !selectedVideo?.playable) {
-							return;
-						}
+				<PlayerPanel selectedVideo={selectedVideo} />
 
-						if (videoEl.paused) {
-							void videoEl.play().catch(() => {
-								// Keep UI stable if browser blocks playback.
-							});
-							return;
-						}
-
-						videoEl.pause();
-					}}
-					onSeek={(seconds) => {
-						const videoEl = videoRef.current;
-						if (!videoEl || !selectedVideo?.playable) {
-							return;
-						}
-						videoEl.currentTime = seconds;
-						setCurrentTime(seconds);
-						setBufferedSeconds(getBufferedSeconds(videoEl));
-						setBufferedUntil(getBufferedUntil(videoEl, seconds));
-						extendBufferForTime(seconds);
-					}}
-					onTimeUpdate={(videoEl) => {
-						setCurrentTime(videoEl.currentTime);
-						setBufferedSeconds(getBufferedSeconds(videoEl));
-						setBufferedUntil(getBufferedUntil(videoEl, videoEl.currentTime));
-						extendBufferForTime(videoEl.currentTime);
-					}}
-					onProgress={(videoEl) => {
-						setBufferedSeconds(getBufferedSeconds(videoEl));
-						setBufferedUntil(getBufferedUntil(videoEl, videoEl.currentTime));
-					}}
-				/>
-
-				<MetadataPanel
-					selectedVideo={selectedVideo}
-					bufferedSeconds={bufferedSeconds}
-					totalDuration={totalDuration}
-					loadedSegmentCount={loadedSegmentCount}
-				/>
-
-				{combinedError ? (
-					<p className="tasksPageError">{combinedError}</p>
-				) : null}
+				{pageError ? <p className="tasksPageError">{pageError}</p> : null}
 			</section>
 		</main>
 	);

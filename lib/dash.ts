@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+
 import { videoRepository } from "./storage";
 
 function getContentTypeByExtension(filePath: string): string {
@@ -35,6 +36,17 @@ function toDashRootAbsolutePath(relativePath: string): string {
 	return path.join(process.cwd(), "videos", relativePath);
 }
 
+function rewriteManifestWithSegmentUrls(
+	mpdText: string,
+	videoId: string,
+): string {
+	const baseUrl = `/api/dash/${videoId}/segment/`;
+	return mpdText.replace(
+		/(<SegmentTemplate\b)/g,
+		`<BaseURL>${baseUrl}</BaseURL>$1`,
+	);
+}
+
 export async function readDashManifest(videoId: string): Promise<DashManifest> {
 	const video = await videoRepository.getVideoById(videoId);
 	if (!video) {
@@ -50,11 +62,12 @@ export async function readDashManifest(videoId: string): Promise<DashManifest> {
 		video.manifestFileName,
 	);
 	const absolutePath = toDashRootAbsolutePath(manifestRelativePath);
+	const rawContent = await readFile(absolutePath, "utf8");
 
 	return {
 		absolutePath,
 		fileName: video.manifestFileName,
-		content: await readFile(absolutePath, "utf8"),
+		content: rewriteManifestWithSegmentUrls(rawContent, videoId),
 		contentType: getContentTypeByExtension(absolutePath),
 	};
 }

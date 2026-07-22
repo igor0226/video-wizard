@@ -1,5 +1,6 @@
-import { AlertCircle, CheckCircle2, Timer } from "lucide-react";
 import type { VideoStatus } from "../types/video";
+
+import { AlertCircle, CheckCircle2, Timer } from "lucide-react";
 
 export type TaskStatusLabel = "Completed" | "In Progress" | "Failed";
 
