@@ -1,12 +1,19 @@
+import type { JobsService } from "./jobs.service";
+
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { CronJob } from "cron";
-
-import { processNextPendingVideo } from "./jobs";
+import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 
 @Injectable()
 export class ProcessingWorkerService implements OnModuleInit {
 	private started = false;
 	private tickLock = false;
+
+	constructor(
+		@InjectPinoLogger(ProcessingWorkerService.name)
+		private readonly logger: PinoLogger,
+		private readonly jobsService: JobsService,
+	) {}
 
 	onModuleInit(): void {
 		this.ensureStarted();
@@ -14,23 +21,24 @@ export class ProcessingWorkerService implements OnModuleInit {
 
 	private async runWorkerTick(): Promise<void> {
 		if (this.tickLock) {
-			console.info("[video-worker] tick skipped (previous tick still running)");
+			this.logger.info("tick skipped (previous tick still running)");
 			return;
 		}
 
 		this.tickLock = true;
 		const tickStartedAt = new Date().toISOString();
-		console.info(`[video-worker] tick started at ${tickStartedAt}`);
+		this.logger.info({ tickStartedAt }, "tick started");
 
 		try {
-			await processNextPendingVideo();
-			console.info(
-				`[video-worker] tick completed at ${new Date().toISOString()}`,
+			await this.jobsService.processNextPendingVideo();
+			this.logger.info(
+				{ completedAt: new Date().toISOString() },
+				"tick completed",
 			);
 		} catch (error) {
 			const message =
 				error instanceof Error ? error.message : "Unexpected worker error";
-			console.error(`[video-worker] tick failed: ${message}`);
+			this.logger.error({ err: message }, "tick failed");
 		} finally {
 			this.tickLock = false;
 		}
@@ -38,22 +46,20 @@ export class ProcessingWorkerService implements OnModuleInit {
 
 	private ensureStarted(): void {
 		if (this.started) {
-			console.info("[video-worker] startup skipped (already initialized)");
+			this.logger.info("startup skipped (already initialized)");
 			return;
 		}
 
 		const cronExpression = process.env.VIDEO_PROCESSOR_CRON ?? "*/15 * * * * *";
-		console.info(
-			`[video-worker] starting cron scheduler with expression "${cronExpression}"`,
-		);
+		this.logger.info({ cronExpression }, "starting cron scheduler");
 		const job = new CronJob(cronExpression, () => {
 			void this.runWorkerTick();
 		});
 
 		job.start();
 		this.started = true;
-		console.info("[video-worker] scheduler started");
-		console.info("[video-worker] running immediate startup tick");
+		this.logger.info("scheduler started");
+		this.logger.info("running immediate startup tick");
 		void this.runWorkerTick();
 	}
 }

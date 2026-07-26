@@ -1,6 +1,5 @@
-import type { CreateVideoInput, VideoRecord } from "../storage";
-
 import { Injectable, NotFoundException } from "@nestjs/common";
+import type { CreateVideoInput, VideoRecord } from "../storage";
 
 import { videoRepository } from "../storage";
 

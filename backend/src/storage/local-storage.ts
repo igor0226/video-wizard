@@ -1,9 +1,3 @@
-import type {
-	BlobStorage,
-	CreateVideoInput,
-	VideoRecord,
-	VideoRepository,
-} from "./types";
 import { randomUUID } from "node:crypto";
 import {
 	mkdir,
@@ -14,6 +8,12 @@ import {
 	writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import type {
+	BlobStorage,
+	CreateVideoInput,
+	VideoRecord,
+	VideoRepository,
+} from "./types";
 
 const STORAGE_ROOT =
 	process.env.STORAGE_ROOT ?? path.join(process.cwd(), "..", "videos");

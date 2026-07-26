@@ -1,6 +1,3 @@
-import type { Response } from "express";
-import type { VideosService } from "./videos.service";
-
 import {
 	Body,
 	Controller,
@@ -12,7 +9,9 @@ import {
 	UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import type { Response } from "express";
 import { memoryStorage } from "multer";
+import { VideosService } from "./videos.service";
 
 @Controller("videos")
 export class VideosController {
@@ -28,17 +27,17 @@ export class VideosController {
 		return { videos: payload };
 	}
 
-	@Get(':id/status')
-  async getStatus(@Param('id') id: string) {
-    const video = await this.videosService.getVideoRecordById(id);
-    return {
-      id: video.id,
-      status: video.status,
-      failureReason: video.failureReason,
-      playable: video.status === 'ready',
-      chunkCount: video.segmentCount,
-    };
-  }
+	@Get(":id/status")
+	async getStatus(@Param("id") id: string) {
+		const video = await this.videosService.getVideoRecordById(id);
+		return {
+			id: video.id,
+			status: video.status,
+			failureReason: video.failureReason,
+			playable: video.status === "ready",
+			chunkCount: video.segmentCount,
+		};
+	}
 
 	@Post("upload")
 	@UseInterceptors(
@@ -49,7 +48,7 @@ export class VideosController {
 	)
 	async upload(
 		@UploadedFile() file: Express.Multer.File | undefined,
-		@Body('title') title: string | undefined,
+		@Body("title") title: string | undefined,
 		@Res() res: Response,
 	) {
 		try {

@@ -1,11 +1,3 @@
-export type {
-	BlobStorage,
-	CreateVideoInput,
-	VideoProcessingStatus,
-	VideoRecord,
-	VideoRepository,
-} from "./types";
-
 export {
 	blobStorage,
 	getStoragePathsForVideo,
@@ -17,3 +9,10 @@ export {
 	StorageModule,
 	VIDEO_REPOSITORY,
 } from "./storage.module";
+export type {
+	BlobStorage,
+	CreateVideoInput,
+	VideoProcessingStatus,
+	VideoRecord,
+	VideoRepository,
+} from "./types";

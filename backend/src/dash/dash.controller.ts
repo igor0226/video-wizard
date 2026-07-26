@@ -1,7 +1,4 @@
-import type { Request, Response } from "express";
-import type { DashService } from "./dash.service";
 import { createReadStream } from "node:fs";
-
 import {
 	Controller,
 	Get,
@@ -12,6 +9,8 @@ import {
 	Res,
 	StreamableFile,
 } from "@nestjs/common";
+import type { Request, Response } from "express";
+import { DashService } from "./dash.service";
 
 @Controller("dash")
 export class DashController {
@@ -20,7 +19,7 @@ export class DashController {
 	@Get(":videoId/manifest.mpd")
 	@Header("Cache-Control", "no-store")
 	async getManifest(
-		@Param('videoId') videoId: string,
+		@Param("videoId") videoId: string,
 		@Res({ passthrough: true }) res: Response,
 	): Promise<string> {
 		try {
@@ -40,7 +39,7 @@ export class DashController {
 	@Get(":videoId/segment/*path")
 	@Header("Cache-Control", "public, max-age=31536000, immutable")
 	async getSegment(
-		@Param('videoId') videoId: string,
+		@Param("videoId") videoId: string,
 		@Req() req: Request,
 		@Res({ passthrough: true }) res: Response,
 	): Promise<StreamableFile> {
