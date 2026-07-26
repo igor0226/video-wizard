@@ -15,6 +15,7 @@ This app allows users to upload their videos, see the list of them, and watch th
 - shadcn-style UI primitives (manually wired)
 - Biome (lint + format via `cd frontend && npm run lint:fix`)
 - **Backend:** Nest.js under `backend/`
+- Backend logging: Pino via `nestjs-pino` (pretty in non-production)
 - Local disk storage (no DB/S3 yet)
 - FFmpeg for DASH generation
 - `cron` npm lib for background processing loop (backend only)
@@ -37,6 +38,7 @@ This app allows users to upload their videos, see the list of them, and watch th
 - Backend worker starts via Nest `OnModuleInit` in `ProcessingWorkerService`.
 - Storage is filesystem-only under repo-root `videos/` (`STORAGE_ROOT` defaults to `../videos` from `backend/` cwd).
 - Browser calls Nest directly (`NEXT_PUBLIC_API_URL`, default `http://localhost:3001`); Nest enables CORS for the Next origin (`CORS_ORIGIN`, default `http://localhost:3000`).
+- Backend logging uses Pino (`nestjs-pino`). Set `LOG_LEVEL` to override the default (`debug` non-prod, `info` prod). Automatic HTTP access logs skip DASH segment routes to avoid spam.
 - No authentication/authorization layer yet.
 
 ## Local Dev (two terminals)
@@ -54,10 +56,11 @@ cd frontend && npm install && npm run dev        # :3000
 
 ## Key Backend Files
 - `backend/src/storage/*` -> storage + repository abstractions
-- `backend/src/processing/*` -> cron worker, jobs, FFmpeg DASH
+- `backend/src/processing/*` -> cron worker (`ProcessingWorkerService`), jobs (`JobsService`), FFmpeg DASH (`FfmpegDashService`)
 - `backend/src/dash/*` -> manifest rewrite + segment serving
 - `backend/src/videos/*` -> list/upload/status HTTP API
-- `backend/src/main.ts` -> CORS, global `api` prefix, port 3001
+- `backend/src/main.ts` -> Pino app logger, CORS, global `api` prefix, port 3001
+- `backend/src/app.module.ts` -> `LoggerModule` (nestjs-pino) + feature modules
 
 ## Key Frontend Files
 - `frontend/app/page.tsx` -> tasks list page

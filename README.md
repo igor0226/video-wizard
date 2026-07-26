@@ -27,6 +27,7 @@ It is designed for local development and feature iteration (no cloud storage or 
 - **UI:** Radix UI primitives + shadcn-style component patterns
 - **Lint/Format:** Biome (frontend)
 - **Processing:** FFmpeg (DASH generation)
+- **Logging (backend):** Pino via `nestjs-pino` (pretty-print in development)
 - **Background Scheduling:** `cron` npm package (Nest worker loop)
 - **Storage:** Local filesystem under repo-root `videos/`
 
@@ -109,6 +110,16 @@ Optional frontend env (`frontend/.env.local`):
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:3001
+```
+
+Optional backend env:
+
+```bash
+PORT=3001
+CORS_ORIGIN=http://localhost:3000
+LOG_LEVEL=debug
+VIDEO_PROCESSOR_CRON="*/15 * * * * *"
+STORAGE_ROOT=/absolute/path/to/videos
 ```
 
 Create production builds:
