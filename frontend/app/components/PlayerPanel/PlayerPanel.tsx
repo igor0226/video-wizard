@@ -15,6 +15,7 @@ import {
 } from "@vidstack/react/player/layouts/default";
 import * as DASH from "dashjs";
 
+import { apiUrl } from "../../lib/api";
 import "./PlayerPanel.css";
 
 type PlayerPanelProps = {
@@ -37,7 +38,7 @@ export function PlayerPanel({ selectedVideo }: PlayerPanelProps) {
 				<MediaPlayer
 					key={selectedVideo.id}
 					onProviderChange={onProviderChange}
-					src={`/api/dash/${selectedVideo.id}/manifest.mpd`}
+					src={apiUrl(`/api/dash/${selectedVideo.id}/manifest.mpd`)}
 				>
 					<MediaProvider />
 					<DefaultVideoLayout icons={defaultLayoutIcons} />

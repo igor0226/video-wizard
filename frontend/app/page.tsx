@@ -10,11 +10,12 @@ import {
 	type StatusFilterKey,
 	TasksToolbar,
 } from "./components/TasksToolbar/TasksToolbar";
+import { apiUrl } from "./lib/api";
 import "./styles/tasks-page.css";
 import type { VideosResponse } from "./types/video";
 
 async function fetchVideos(): Promise<VideosResponse> {
-	const response = await fetch("/api/videos");
+	const response = await fetch(apiUrl("/api/videos"));
 	if (!response.ok) {
 		throw new Error("Failed to load videos");
 	}

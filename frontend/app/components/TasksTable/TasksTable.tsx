@@ -10,14 +10,17 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { Button } from "../../../components/ui/button";
-import { Checkbox } from "../../../components/ui/checkbox";
+import { formatCreatedAt, formatTaskId } from "../../lib/format";
+import { getTaskStatusLabel, TaskStatusIcon } from "../../lib/task-status";
+import { cn } from "../../lib/utils";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "../../../components/ui/dropdown-menu";
+} from "../ui/dropdown-menu";
 import {
 	Table,
 	TableBody,
@@ -25,10 +28,7 @@ import {
 	TableHead,
 	TableHeader,
 	TableRow,
-} from "../../../components/ui/table";
-import { cn } from "../../../lib/utils";
-import { formatCreatedAt, formatTaskId } from "../../lib/format";
-import { getTaskStatusLabel, TaskStatusIcon } from "../../lib/task-status";
+} from "../ui/table";
 import "./TasksTable.css";
 
 type TasksTableProps = {

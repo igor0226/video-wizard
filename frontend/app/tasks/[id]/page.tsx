@@ -8,11 +8,12 @@ import { useEffect, useMemo } from "react";
 
 import { AppPageHeader } from "../../components/AppPageHeader/AppPageHeader";
 import { PlayerPanel } from "../../components/PlayerPanel/PlayerPanel";
+import { apiUrl } from "../../lib/api";
 
 import "../../styles/tasks-page.css";
 
 async function fetchVideos(): Promise<VideosResponse> {
-	const response = await fetch("/api/videos");
+	const response = await fetch(apiUrl("/api/videos"));
 	if (!response.ok) {
 		throw new Error("Failed to load videos");
 	}
@@ -20,7 +21,7 @@ async function fetchVideos(): Promise<VideosResponse> {
 }
 
 async function fetchVideoStatus(videoId: string): Promise<VideoStatusResponse> {
-	const response = await fetch(`/api/videos/${videoId}/status`);
+	const response = await fetch(apiUrl(`/api/videos/${videoId}/status`));
 	if (!response.ok) {
 		throw new Error("Failed to load video status");
 	}

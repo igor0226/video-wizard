@@ -3,15 +3,11 @@
 import { CirclePlus, Search } from "lucide-react";
 import Link from "next/link";
 
-import { Button } from "../../../components/ui/button";
-import { Checkbox } from "../../../components/ui/checkbox";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "../../../components/ui/popover";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import "./TasksToolbar.css";
 
 export type StatusFilterKey = "completed" | "inProgress" | "failed";

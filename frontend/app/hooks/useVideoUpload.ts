@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from "react";
 
+import { apiUrl } from "../lib/api";
+
 type UploadVideoInput = {
 	title: string;
 	file: File;
@@ -32,7 +34,7 @@ export function useVideoUpload() {
 
 		return new Promise<string>((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
-			xhr.open("POST", "/api/videos/upload");
+			xhr.open("POST", apiUrl("/api/videos/upload"));
 			xhr.upload.onprogress = (progressEvent) => {
 				if (progressEvent.lengthComputable) {
 					setUploadProgress((progressEvent.loaded / progressEvent.total) * 100);
