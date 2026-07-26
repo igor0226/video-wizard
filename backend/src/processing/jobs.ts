@@ -12,7 +12,6 @@ function normalizeFailureMessage(error: unknown): string {
 }
 
 export async function processNextPendingVideo(): Promise<void> {
-	// biome-ignore lint: noConsole
 	console.info("[video-worker] stage=scan-processable start");
 	const videos = await videoRepository.listVideos();
 
@@ -25,11 +24,9 @@ export async function processNextPendingVideo(): Promise<void> {
 
 	const video = pending[0] ?? staleProcessing[0] ?? null;
 	if (!video) {
-		// biome-ignore lint: noConsole
 		console.info("[video-worker] stage=scan-processable result=none");
 		return;
 	}
-	// biome-ignore lint: noConsole
 	console.info(
 		`[video-worker] stage=scan-processable result=found videoId=${video.id} status=${video.status} title="${video.title}"`,
 	);
@@ -45,7 +42,6 @@ export async function processNextPendingVideo(): Promise<void> {
 	} catch (error) {
 		const code = (error as { code?: string }).code;
 		if (code === "EEXIST") {
-			// biome-ignore lint: noConsole
 			console.info(
 				`[video-worker] stage=lock-skip videoId=${video.id} reason=already-locked`,
 			);
@@ -55,38 +51,31 @@ export async function processNextPendingVideo(): Promise<void> {
 	}
 
 	if (video.status !== "processing") {
-		// biome-ignore lint: noConsole
 		console.info(`[video-worker] stage=mark-processing videoId=${video.id}`);
 		await videoRepository.updateVideo(video.id, {
 			status: "processing",
 			failureReason: null,
 		});
 	} else {
-		// biome-ignore lint: noConsole
 		console.info(`[video-worker] stage=resume-processing videoId=${video.id}`);
 	}
 
 	try {
-		// biome-ignore lint: noConsole
 		console.info(`[video-worker] stage=transcode-start videoId=${video.id}`);
 		const result = await generateDashAssets(video);
-		// biome-ignore lint: noConsole
 		console.info(
 			`[video-worker] stage=transcode-success videoId=${video.id} segments=${result.segmentCount}`,
 		);
 
-		// biome-ignore lint: noConsole
 		console.info(`[video-worker] stage=mark-ready videoId=${video.id}`);
 		await videoRepository.updateVideo(video.id, {
 			status: "ready",
 			segmentCount: result.segmentCount,
 			failureReason: null,
 		});
-		// biome-ignore lint: noConsole
 		console.info(`[video-worker] stage=done videoId=${video.id} status=ready`);
 	} catch (error) {
 		const failureReason = normalizeFailureMessage(error);
-		// biome-ignore lint: noConsole
 		console.error(
 			`[video-worker] stage=transcode-failed videoId=${video.id} reason="${failureReason}"`,
 		);
@@ -94,7 +83,6 @@ export async function processNextPendingVideo(): Promise<void> {
 			status: "failed",
 			failureReason,
 		});
-		// biome-ignore lint: noConsole
 		console.info(`[video-worker] stage=done videoId=${video.id} status=failed`);
 	} finally {
 		if (lockHandle) {

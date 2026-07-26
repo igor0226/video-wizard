@@ -15,7 +15,8 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 
-const STORAGE_ROOT = path.join(process.cwd(), "videos");
+const STORAGE_ROOT =
+	process.env.STORAGE_ROOT ?? path.join(process.cwd(), "..", "videos");
 const UPLOADS_DIR = "uploads";
 const DASH_DIR = "dash";
 const RECORDS_DIR = "records";
@@ -215,8 +216,10 @@ const localVideoRepository: VideoRepository = {
 	async getNextPendingVideo() {
 		const videos = await this.listVideos();
 		const pending = videos
-			.filter((video) => video.status === "pending")
-			.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+			.filter((video: VideoRecord) => video.status === "pending")
+			.sort((left: VideoRecord, right: VideoRecord) =>
+				left.createdAt.localeCompare(right.createdAt),
+			);
 		return pending[0] ?? null;
 	},
 };
@@ -240,6 +243,10 @@ export function getStoragePathsForVideo(video: VideoRecord): {
 		manifestAbsolutePath:
 			localBlobStorage.resolveRelativePath(dashRelativeManifest),
 	};
+}
+
+export function getStorageRoot(): string {
+	return STORAGE_ROOT;
 }
 
 export const blobStorage = localBlobStorage;

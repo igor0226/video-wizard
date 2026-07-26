@@ -72,7 +72,6 @@ export async function generateDashAssets(
 	];
 
 	try {
-		// biome-ignore lint: noConsole
 		console.info(
 			`[video-worker] stage=ffmpeg-run videoId=${video.id} output="${manifestAbsolutePath}"`,
 		);
