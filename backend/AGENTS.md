@@ -31,18 +31,28 @@ Nest.js app under `src/` with feature modules:
 - `videos/audio/<videoId>/track.mp3` — extracted mono MP3 for transcription
 - `videos/transcripts/<videoId>/transcript.json` — Whisper verbose JSON (word timestamps)
 - `videos/records/<videoId>.json`
+- `videos/history/<videoId>.json` — processing step history (events + current step)
 - `videos/locks/<videoId>.lock` (worker concurrency guard)
 
 ### Processing pipeline
 
-Worker order for each pending video: **DASH transcode → audio extract → Whisper transcribe → ready**.
+Worker order for each pending video: **audio extract → Whisper transcribe → DASH transcode → ready**.
 
-- `FfmpegDashService` — DASH packaging
 - `FfmpegAudioService` — extracts mono 16 kHz MP3 (`audio/<videoId>/track.mp3`); fails if no audio track
 - `WhisperTranscriptionService` — OpenAI `whisper-1` with `verbose_json` + word timestamps; writes `transcripts/<videoId>/transcript.json`
+- `FfmpegDashService` — DASH packaging
 - Files > 24 MB are split into ~10-minute chunks before transcription and merged with offset word timestamps
 - `OPENAI_API_KEY` is required when the worker runs transcription
-- Any step failure marks the video `failed` (same as DASH errors today)
+- Any step failure marks the video `failed` and records the failing step in history
+- Completed steps are skipped on resume when their output files already exist
+
+Processing steps tracked in history: `queued`, `audio_extract`, `transcribing`, `dash_encoding`, `completed`, `failed`.
+
+### Video API processing fields
+
+- `GET /api/videos` — each item includes `processingStep` and `queuePosition` (`null` unless `status === "pending"`)
+- `GET /api/videos/:id/status` — adds `processingHistory` (full event log) plus `processingStep` and `queuePosition`
+- `queuePosition` is computed at read time: 1-based index among pending videos sorted by `createdAt`
 
 ### DASH
 

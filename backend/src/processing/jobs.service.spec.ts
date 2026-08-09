@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BlobStorageService, VideoRepositoryService } from "../storage";
+import {
+	BlobStorageService,
+	ProcessingHistoryService,
+	VideoRepositoryService,
+} from "../storage";
 import type { VideoRecord } from "../storage/types";
 import { FfmpegAudioService } from "./ffmpeg-audio.service";
 import { FfmpegDashService } from "./ffmpeg-dash.service";
@@ -39,11 +43,14 @@ describe("JobsService", () => {
 	let transcriptionService: WhisperTranscriptionService;
 	let videoRepository: VideoRepositoryService;
 	let blobStorage: BlobStorageService;
+	let processingHistory: ProcessingHistoryService;
 	const callOrder: string[] = [];
+	const existingFiles = new Set<string>();
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 		callOrder.length = 0;
+		existingFiles.clear();
 		ffmpegDashService = {
 			generateDashAssets: vi.fn(async () => {
 				callOrder.push("dash");
@@ -59,7 +66,9 @@ describe("JobsService", () => {
 		transcriptionService = {
 			transcribe: vi.fn(async () => {
 				callOrder.push("transcribe");
-				return { transcriptRelativePath: "transcripts/video-1/transcript.json" };
+				return {
+					transcriptRelativePath: "transcripts/video-1/transcript.json",
+				};
 			}),
 		} as unknown as WhisperTranscriptionService;
 		videoRepository = {
@@ -74,9 +83,24 @@ describe("JobsService", () => {
 				return { ...video, ...patch };
 			}),
 		} as unknown as VideoRepositoryService;
+		processingHistory = {
+			recordStepStart: vi.fn(async () => undefined),
+			recordStepComplete: vi.fn(async () => undefined),
+			recordFailure: vi.fn(async () => undefined),
+			markCompleted: vi.fn(async () => {
+				callOrder.push("mark-completed");
+			}),
+		} as unknown as ProcessingHistoryService;
 		blobStorage = {
 			resolveRelativePath: vi.fn(
 				(relativePath: string) => `/tmp/${relativePath}`,
+			),
+			getAudioRelativePath: vi.fn(() => "audio/video-1/track.mp3"),
+			getTranscriptRelativePath: vi.fn(
+				() => "transcripts/video-1/transcript.json",
+			),
+			fileExists: vi.fn(async (relativePath: string) =>
+				existingFiles.has(relativePath),
 			),
 		} as unknown as BlobStorageService;
 
@@ -87,17 +111,19 @@ describe("JobsService", () => {
 			transcriptionService,
 			videoRepository,
 			blobStorage,
+			processingHistory,
 		);
 	});
 
-	it("runs DASH, audio extraction, and transcription before marking ready", async () => {
+	it("runs audio extraction, transcription, and DASH before marking ready", async () => {
 		await service.processNextPendingVideo();
 
 		expect(callOrder).toEqual([
 			"mark-processing",
-			"dash",
 			"audio",
 			"transcribe",
+			"dash",
+			"mark-completed",
 			"mark-ready",
 		]);
 		expect(videoRepository.updateVideo).toHaveBeenCalledWith("video-1", {
@@ -106,5 +132,28 @@ describe("JobsService", () => {
 			transcriptRelativePath: "transcripts/video-1/transcript.json",
 			failureReason: null,
 		});
+		expect(processingHistory.recordStepStart).toHaveBeenCalledTimes(3);
+		expect(processingHistory.markCompleted).toHaveBeenCalledWith("video-1");
+	});
+
+	it("skips steps whose outputs already exist", async () => {
+		existingFiles.add("audio/video-1/track.mp3");
+		existingFiles.add("transcripts/video-1/transcript.json");
+
+		await service.processNextPendingVideo();
+
+		expect(callOrder).toEqual([
+			"mark-processing",
+			"dash",
+			"mark-completed",
+			"mark-ready",
+		]);
+		expect(ffmpegAudioService.extractAudio).not.toHaveBeenCalled();
+		expect(transcriptionService.transcribe).not.toHaveBeenCalled();
+		expect(processingHistory.recordStepComplete).toHaveBeenCalledWith(
+			"video-1",
+			"audio_extract",
+			"skipped (already present)",
+		);
 	});
 });

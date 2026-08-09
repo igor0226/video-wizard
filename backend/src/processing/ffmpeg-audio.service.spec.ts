@@ -45,7 +45,9 @@ describe("FfmpegAudioService", () => {
 			getAudioRelativePath: vi.fn(() => "audio/video-1/track.mp3"),
 			getAudioDirectoryRelativePath: vi.fn(() => "audio/video-1"),
 			ensureCleanDirectory: vi.fn(),
-			resolveRelativePath: vi.fn((relativePath: string) => `/tmp/${relativePath}`),
+			resolveRelativePath: vi.fn(
+				(relativePath: string) => `/tmp/${relativePath}`,
+			),
 			fileExists: vi.fn(async () => true),
 		} as unknown as BlobStorageService;
 		service = new FfmpegAudioService({ info: vi.fn() } as never, blobStorage);

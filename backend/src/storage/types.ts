@@ -28,3 +28,27 @@ export type CreateVideoInput = {
 	sizeBytes: number;
 	fileBuffer: Buffer;
 };
+
+export type ProcessingStep =
+	| "queued"
+	| "audio_extract"
+	| "transcribing"
+	| "dash_encoding"
+	| "completed"
+	| "failed";
+
+export type ProcessingEventStatus = "started" | "completed" | "failed";
+
+export type ProcessingHistoryEvent = {
+	step: ProcessingStep;
+	status: ProcessingEventStatus;
+	at: string;
+	message?: string;
+};
+
+export type VideoProcessingHistory = {
+	videoId: string;
+	currentStep: ProcessingStep;
+	events: ProcessingHistoryEvent[];
+	updatedAt: string;
+};

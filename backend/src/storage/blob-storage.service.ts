@@ -17,6 +17,7 @@ const DASH_DIR = "dash";
 const RECORDS_DIR = "records";
 const AUDIO_DIR = "audio";
 const TRANSCRIPTS_DIR = "transcripts";
+const HISTORY_DIR = "history";
 
 async function ensureDir(dirPath: string): Promise<void> {
 	await mkdir(dirPath, { recursive: true });
@@ -40,6 +41,7 @@ export class BlobStorageService {
 			ensureDir(path.join(storageRoot, RECORDS_DIR)),
 			ensureDir(path.join(storageRoot, AUDIO_DIR)),
 			ensureDir(path.join(storageRoot, TRANSCRIPTS_DIR)),
+			ensureDir(path.join(storageRoot, HISTORY_DIR)),
 		]);
 	}
 

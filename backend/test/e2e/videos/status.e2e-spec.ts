@@ -29,6 +29,12 @@ describe("Videos status (e2e)", () => {
 			status: "ready",
 			playable: true,
 			chunkCount: 1,
+			processingStep: "completed",
 		});
+		expect(response.body.processingHistory).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ step: "completed", status: "completed" }),
+			]),
+		);
 	});
 });

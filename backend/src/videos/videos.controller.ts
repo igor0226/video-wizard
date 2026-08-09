@@ -29,14 +29,7 @@ export class VideosController {
 
 	@Get(":id/status")
 	async getStatus(@Param("id") id: string) {
-		const video = await this.videosService.getVideoRecordById(id);
-		return {
-			id: video.id,
-			status: video.status,
-			failureReason: video.failureReason,
-			playable: video.status === "ready",
-			chunkCount: video.segmentCount,
-		};
+		return this.videosService.getVideoStatusForApi(id);
 	}
 
 	@Post("upload")
