@@ -42,6 +42,7 @@ export async function seedReadyVideo(
 		createdAt: nowIso,
 		updatedAt: nowIso,
 		failureReason: null,
+		transcriptRelativePath: null,
 	};
 
 	const manifestContent = [

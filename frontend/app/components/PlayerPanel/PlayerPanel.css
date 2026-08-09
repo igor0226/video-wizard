@@ -8,7 +8,3 @@
 .videoPlaceholder {
 	@apply w-full min-h-[260px] border border-dashed border-border rounded-sm grid place-items-center text-center p-4 text-muted-foreground bg-muted;
 }
-
-.note {
-	@apply text-muted-foreground;
-}

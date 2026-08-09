@@ -15,6 +15,8 @@ import type { VideoRecord } from "./types";
 const UPLOADS_DIR = "uploads";
 const DASH_DIR = "dash";
 const RECORDS_DIR = "records";
+const AUDIO_DIR = "audio";
+const TRANSCRIPTS_DIR = "transcripts";
 
 async function ensureDir(dirPath: string): Promise<void> {
 	await mkdir(dirPath, { recursive: true });
@@ -36,6 +38,8 @@ export class BlobStorageService {
 			ensureDir(path.join(storageRoot, UPLOADS_DIR)),
 			ensureDir(path.join(storageRoot, DASH_DIR)),
 			ensureDir(path.join(storageRoot, RECORDS_DIR)),
+			ensureDir(path.join(storageRoot, AUDIO_DIR)),
+			ensureDir(path.join(storageRoot, TRANSCRIPTS_DIR)),
 		]);
 	}
 
@@ -56,6 +60,18 @@ export class BlobStorageService {
 	async readBytes(relativePath: string): Promise<Buffer> {
 		const absolutePath = this.resolveRelativePath(relativePath);
 		return readFile(absolutePath);
+	}
+
+	async writeJson(relativePath: string, data: unknown): Promise<void> {
+		const absolutePath = this.resolveRelativePath(relativePath);
+		await ensureDir(path.dirname(absolutePath));
+		await writeFile(absolutePath, JSON.stringify(data, null, 2), "utf8");
+	}
+
+	async getFileSizeBytes(relativePath: string): Promise<number> {
+		const absolutePath = this.resolveRelativePath(relativePath);
+		const entry = await stat(absolutePath);
+		return entry.size;
 	}
 
 	resolveRelativePath(relativePath: string): string {
@@ -106,5 +122,17 @@ export class BlobStorageService {
 			dashAbsolutePath: this.resolveRelativePath(video.dashRelativePath),
 			manifestAbsolutePath: this.resolveRelativePath(dashRelativeManifest),
 		};
+	}
+
+	getAudioRelativePath(videoId: string): string {
+		return path.posix.join(AUDIO_DIR, videoId, "track.mp3");
+	}
+
+	getAudioDirectoryRelativePath(videoId: string): string {
+		return path.posix.join(AUDIO_DIR, videoId);
+	}
+
+	getTranscriptRelativePath(videoId: string): string {
+		return path.posix.join(TRANSCRIPTS_DIR, videoId, "transcript.json");
 	}
 }

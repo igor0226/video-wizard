@@ -5,7 +5,7 @@
 Nest.js app under `src/` with feature modules:
 
 - `videos/` — list/upload/status HTTP API
-- `processing/` — cron worker, jobs, FFmpeg DASH generation
+- `processing/` — cron worker, jobs, FFmpeg DASH generation, audio extraction, Whisper transcription
 - `dash/` — manifest rewrite + segment serving
 - `storage/` — filesystem storage + video record repository
 
@@ -28,8 +28,21 @@ Nest.js app under `src/` with feature modules:
 
 - `videos/uploads/<videoId>/<source-file>`
 - `videos/dash/<videoId>/manifest.mpd` + segments
+- `videos/audio/<videoId>/track.mp3` — extracted mono MP3 for transcription
+- `videos/transcripts/<videoId>/transcript.json` — Whisper verbose JSON (word timestamps)
 - `videos/records/<videoId>.json`
 - `videos/locks/<videoId>.lock` (worker concurrency guard)
+
+### Processing pipeline
+
+Worker order for each pending video: **DASH transcode → audio extract → Whisper transcribe → ready**.
+
+- `FfmpegDashService` — DASH packaging
+- `FfmpegAudioService` — extracts mono 16 kHz MP3 (`audio/<videoId>/track.mp3`); fails if no audio track
+- `WhisperTranscriptionService` — OpenAI `whisper-1` with `verbose_json` + word timestamps; writes `transcripts/<videoId>/transcript.json`
+- Files > 24 MB are split into ~10-minute chunks before transcription and merged with offset word timestamps
+- `OPENAI_API_KEY` is required when the worker runs transcription
+- Any step failure marks the video `failed` (same as DASH errors today)
 
 ### DASH
 

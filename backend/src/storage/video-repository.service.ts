@@ -34,7 +34,11 @@ function toRecordFileName(videoId: string): string {
 
 async function readRecordFile(recordPath: string): Promise<VideoRecord> {
 	const content = await readFile(recordPath, "utf8");
-	return JSON.parse(content) as VideoRecord;
+	const parsed = JSON.parse(content) as Partial<VideoRecord>;
+	return {
+		...parsed,
+		transcriptRelativePath: parsed.transcriptRelativePath ?? null,
+	} as VideoRecord;
 }
 
 async function isDirectory(absolutePath: string): Promise<boolean> {
@@ -77,6 +81,7 @@ export class VideoRepositoryService {
 			createdAt: nowIso,
 			updatedAt: nowIso,
 			failureReason: null,
+			transcriptRelativePath: null,
 		};
 
 		await this.blobStorage.writeUploadFile(

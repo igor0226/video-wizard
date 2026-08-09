@@ -18,6 +18,7 @@ export type VideoRecord = {
 	createdAt: string;
 	updatedAt: string;
 	failureReason: string | null;
+	transcriptRelativePath: string | null;
 };
 
 export type CreateVideoInput = {

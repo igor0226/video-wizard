@@ -52,14 +52,6 @@ export function PlayerPanel({ selectedVideo }: PlayerPanelProps) {
 					</p>
 				</div>
 			)}
-			{selectedVideo && selectedVideo.status !== "ready" ? (
-				<p className="note">
-					Status: {selectedVideo.status}
-					{selectedVideo.failureReason
-						? ` - ${selectedVideo.failureReason}`
-						: ""}
-				</p>
-			) : null}
 		</section>
 	);
 }

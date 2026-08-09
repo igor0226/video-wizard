@@ -5,7 +5,9 @@ import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 
 import { BlobStorageService, VideoRepositoryService } from "../storage";
+import { FfmpegAudioService } from "./ffmpeg-audio.service";
 import { FfmpegDashService } from "./ffmpeg-dash.service";
+import { WhisperTranscriptionService } from "./transcription.service";
 
 function normalizeFailureMessage(error: unknown): string {
 	if (error instanceof Error) {
@@ -20,6 +22,8 @@ export class JobsService {
 		@InjectPinoLogger(JobsService.name)
 		private readonly logger: PinoLogger,
 		private readonly ffmpegDashService: FfmpegDashService,
+		private readonly ffmpegAudioService: FfmpegAudioService,
+		private readonly transcriptionService: WhisperTranscriptionService,
 		private readonly videoRepository: VideoRepositoryService,
 		private readonly blobStorage: BlobStorageService,
 	) {}
@@ -83,10 +87,31 @@ export class JobsService {
 				"transcode-success",
 			);
 
+			this.logger.info({ videoId: video.id }, "audio-extract-start");
+			const audioResult = await this.ffmpegAudioService.extractAudio(video);
+			this.logger.info(
+				{ videoId: video.id, audioPath: audioResult.audioRelativePath },
+				"audio-extract-success",
+			);
+
+			this.logger.info({ videoId: video.id }, "transcription-start");
+			const transcriptResult = await this.transcriptionService.transcribe(
+				video,
+				audioResult,
+			);
+			this.logger.info(
+				{
+					videoId: video.id,
+					transcriptPath: transcriptResult.transcriptRelativePath,
+				},
+				"transcription-complete",
+			);
+
 			this.logger.info({ videoId: video.id }, "mark-ready");
 			await this.videoRepository.updateVideo(video.id, {
 				status: "ready",
 				segmentCount: result.segmentCount,
+				transcriptRelativePath: transcriptResult.transcriptRelativePath,
 				failureReason: null,
 			});
 			this.logger.info({ videoId: video.id, status: "ready" }, "done");
