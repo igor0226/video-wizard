@@ -12,8 +12,6 @@ import { Injectable } from "@nestjs/common";
 
 import type { VideoRecord } from "./types";
 
-const STORAGE_ROOT =
-	process.env.STORAGE_ROOT ?? path.join(process.cwd(), "..", "videos");
 const UPLOADS_DIR = "uploads";
 const DASH_DIR = "dash";
 const RECORDS_DIR = "records";
@@ -22,17 +20,22 @@ async function ensureDir(dirPath: string): Promise<void> {
 	await mkdir(dirPath, { recursive: true });
 }
 
+function resolveStorageRoot(): string {
+	return process.env.STORAGE_ROOT ?? path.join(process.cwd(), "..", "videos");
+}
+
 @Injectable()
 export class BlobStorageService {
 	getStorageRoot(): string {
-		return STORAGE_ROOT;
+		return resolveStorageRoot();
 	}
 
 	async ensureLayout(): Promise<void> {
+		const storageRoot = this.getStorageRoot();
 		await Promise.all([
-			ensureDir(path.join(STORAGE_ROOT, UPLOADS_DIR)),
-			ensureDir(path.join(STORAGE_ROOT, DASH_DIR)),
-			ensureDir(path.join(STORAGE_ROOT, RECORDS_DIR)),
+			ensureDir(path.join(storageRoot, UPLOADS_DIR)),
+			ensureDir(path.join(storageRoot, DASH_DIR)),
+			ensureDir(path.join(storageRoot, RECORDS_DIR)),
 		]);
 	}
 
@@ -56,9 +59,10 @@ export class BlobStorageService {
 	}
 
 	resolveRelativePath(relativePath: string): string {
+		const storageRoot = this.getStorageRoot();
 		const normalized = path.normalize(relativePath);
-		const absolutePath = path.join(STORAGE_ROOT, normalized);
-		const normalizedRoot = `${path.normalize(STORAGE_ROOT)}${path.sep}`;
+		const absolutePath = path.join(storageRoot, normalized);
+		const normalizedRoot = `${path.normalize(storageRoot)}${path.sep}`;
 		if (!path.normalize(absolutePath).startsWith(normalizedRoot)) {
 			throw new Error("Invalid storage path");
 		}

@@ -6,7 +6,7 @@ tsconfig.tsbuildinfo
 dist/
 coverage/
 
-videos/
+videos/*
 !backend/src/videos
 frontend/.env.local
 backend/.env

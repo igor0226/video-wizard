@@ -1,8 +1,8 @@
-import type { JobsService } from "./jobs.service";
-
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { CronJob } from "cron";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
+
+import { JobsService } from "./jobs.service";
 
 @Injectable()
 export class ProcessingWorkerService implements OnModuleInit {
@@ -47,6 +47,11 @@ export class ProcessingWorkerService implements OnModuleInit {
 	private ensureStarted(): void {
 		if (this.started) {
 			this.logger.info("startup skipped (already initialized)");
+			return;
+		}
+
+		if (process.env.VIDEO_PROCESSING_CRON_ENABLED !== "true") {
+			this.logger.info("processing cron disabled via env");
 			return;
 		}
 
