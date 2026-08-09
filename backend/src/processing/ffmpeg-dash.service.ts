@@ -1,11 +1,11 @@
 import { spawn } from "node:child_process";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
+
 import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
-import type { VideoRecord } from "../storage";
 
-import { blobStorage, getStoragePathsForVideo } from "../storage";
+import { BlobStorageService, type VideoRecord } from "../storage";
 
 function runProcess(command: string, args: string[]): Promise<void> {
 	return new Promise((resolve, reject) => {
@@ -35,15 +35,16 @@ export class FfmpegDashService {
 	constructor(
 		@InjectPinoLogger(FfmpegDashService.name)
 		private readonly logger: PinoLogger,
+		private readonly blobStorage: BlobStorageService,
 	) {}
 
 	async generateDashAssets(
 		video: VideoRecord,
 	): Promise<{ segmentCount: number }> {
-		await blobStorage.ensureLayout();
+		await this.blobStorage.ensureLayout();
 		const { sourceAbsolutePath, dashAbsolutePath, manifestAbsolutePath } =
-			getStoragePathsForVideo(video);
-		await blobStorage.ensureCleanDirectory(video.dashRelativePath);
+			this.blobStorage.getStoragePathsForVideo(video);
+		await this.blobStorage.ensureCleanDirectory(video.dashRelativePath);
 
 		const args = [
 			"-y",

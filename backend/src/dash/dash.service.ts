@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { Injectable, NotFoundException } from "@nestjs/common";
 
-import { getStorageRoot, videoRepository } from "../storage";
+import { BlobStorageService, VideoRepositoryService } from "../storage";
 
 export type DashManifest = {
 	absolutePath: string;
@@ -14,6 +14,11 @@ export type DashManifest = {
 
 @Injectable()
 export class DashService {
+	constructor(
+		private readonly videoRepository: VideoRepositoryService,
+		private readonly blobStorage: BlobStorageService,
+	) {}
+
 	private getContentTypeByExtension(filePath: string): string {
 		const ext = path.extname(filePath).toLowerCase();
 		if (ext === ".mpd") {
@@ -37,7 +42,7 @@ export class DashService {
 	}
 
 	private toDashRootAbsolutePath(relativePath: string): string {
-		return path.join(getStorageRoot(), relativePath);
+		return path.join(this.blobStorage.getStorageRoot(), relativePath);
 	}
 
 	private rewriteManifestWithSegmentUrls(
@@ -52,7 +57,7 @@ export class DashService {
 	}
 
 	async readDashManifest(videoId: string): Promise<DashManifest> {
-		const video = await videoRepository.getVideoById(videoId);
+		const video = await this.videoRepository.getVideoById(videoId);
 		if (!video) {
 			throw new NotFoundException("Video not found");
 		}
@@ -84,7 +89,7 @@ export class DashService {
 			throw new NotFoundException("Missing DASH asset path");
 		}
 
-		const video = await videoRepository.getVideoById(videoId);
+		const video = await this.videoRepository.getVideoById(videoId);
 		if (!video) {
 			throw new NotFoundException("Video not found");
 		}

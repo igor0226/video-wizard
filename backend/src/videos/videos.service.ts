@@ -1,7 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { CreateVideoInput, VideoRecord } from "../storage";
 
-import { videoRepository } from "../storage";
+import {
+	VideoRepositoryService,
+	type CreateVideoInput,
+	type VideoRecord,
+} from "../storage";
 
 export type VideoListItem = {
 	id: string;
@@ -17,8 +20,10 @@ export type VideoListItem = {
 
 @Injectable()
 export class VideosService {
+	constructor(private readonly videoRepository: VideoRepositoryService) {}
+
 	async listVideosForApi(): Promise<VideoListItem[]> {
-		const videos = await videoRepository.listVideos();
+		const videos = await this.videoRepository.listVideos();
 		return videos.map((video) => ({
 			id: video.id,
 			title: video.title,
@@ -33,7 +38,7 @@ export class VideosService {
 	}
 
 	async getVideoRecordById(videoId: string): Promise<VideoRecord> {
-		const video = await videoRepository.getVideoById(videoId);
+		const video = await this.videoRepository.getVideoById(videoId);
 		if (!video) {
 			throw new NotFoundException("Video not found");
 		}
@@ -41,6 +46,6 @@ export class VideosService {
 	}
 
 	async createVideo(input: CreateVideoInput): Promise<VideoRecord> {
-		return videoRepository.createVideo(input);
+		return this.videoRepository.createVideo(input);
 	}
 }

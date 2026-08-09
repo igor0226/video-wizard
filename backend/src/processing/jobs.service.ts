@@ -1,8 +1,10 @@
 import { mkdir, open, rm } from "node:fs/promises";
 import path from "node:path";
+
 import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
-import { blobStorage, videoRepository } from "../storage";
+
+import { BlobStorageService, VideoRepositoryService } from "../storage";
 import { FfmpegDashService } from "./ffmpeg-dash.service";
 
 function normalizeFailureMessage(error: unknown): string {
@@ -18,11 +20,13 @@ export class JobsService {
 		@InjectPinoLogger(JobsService.name)
 		private readonly logger: PinoLogger,
 		private readonly ffmpegDashService: FfmpegDashService,
+		private readonly videoRepository: VideoRepositoryService,
+		private readonly blobStorage: BlobStorageService,
 	) {}
 
 	async processNextPendingVideo(): Promise<void> {
 		this.logger.info("scan-processable start");
-		const videos = await videoRepository.listVideos();
+		const videos = await this.videoRepository.listVideos();
 
 		const pending = videos
 			.filter((video) => video.status === "pending")
@@ -41,7 +45,7 @@ export class JobsService {
 			"scan-processable found",
 		);
 
-		const lockPath = blobStorage.resolveRelativePath(
+		const lockPath = this.blobStorage.resolveRelativePath(
 			path.posix.join("locks", `${video.id}.lock`),
 		);
 		await mkdir(path.dirname(lockPath), { recursive: true });
@@ -63,7 +67,7 @@ export class JobsService {
 
 		if (video.status !== "processing") {
 			this.logger.info({ videoId: video.id }, "mark-processing");
-			await videoRepository.updateVideo(video.id, {
+			await this.videoRepository.updateVideo(video.id, {
 				status: "processing",
 				failureReason: null,
 			});
@@ -80,7 +84,7 @@ export class JobsService {
 			);
 
 			this.logger.info({ videoId: video.id }, "mark-ready");
-			await videoRepository.updateVideo(video.id, {
+			await this.videoRepository.updateVideo(video.id, {
 				status: "ready",
 				segmentCount: result.segmentCount,
 				failureReason: null,
@@ -92,7 +96,7 @@ export class JobsService {
 				{ videoId: video.id, reason: failureReason },
 				"transcode-failed",
 			);
-			await videoRepository.updateVideo(video.id, {
+			await this.videoRepository.updateVideo(video.id, {
 				status: "failed",
 				failureReason,
 			});
