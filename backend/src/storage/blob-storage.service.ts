@@ -10,7 +10,7 @@ import path from "node:path";
 
 import { Injectable } from "@nestjs/common";
 
-import type { VideoRecord } from "./types";
+import type { ProcessingStep, VideoRecord } from "./types";
 
 const UPLOADS_DIR = "uploads";
 const DASH_DIR = "dash";
@@ -136,5 +136,44 @@ export class BlobStorageService {
 
 	getTranscriptRelativePath(videoId: string): string {
 		return path.posix.join(TRANSCRIPTS_DIR, videoId, "transcript.json");
+	}
+
+	getTranscriptDirectoryRelativePath(videoId: string): string {
+		return path.posix.join(TRANSCRIPTS_DIR, videoId);
+	}
+
+	getDashDirectoryRelativePath(videoId: string): string {
+		return path.posix.join(DASH_DIR, videoId);
+	}
+
+	async clearProcessingArtifactsFromStep(
+		videoId: string,
+		fromStep: ProcessingStep,
+	): Promise<void> {
+		const directories: string[] = [];
+
+		if (fromStep === "audio_extract") {
+			directories.push(
+				this.getAudioDirectoryRelativePath(videoId),
+				this.getTranscriptDirectoryRelativePath(videoId),
+				this.getDashDirectoryRelativePath(videoId),
+			);
+		} else if (fromStep === "transcribing") {
+			directories.push(
+				this.getTranscriptDirectoryRelativePath(videoId),
+				this.getDashDirectoryRelativePath(videoId),
+			);
+		} else if (fromStep === "dash_encoding") {
+			directories.push(this.getDashDirectoryRelativePath(videoId));
+		}
+
+		await Promise.all(
+			directories.map((relativePath) =>
+				rm(this.resolveRelativePath(relativePath), {
+					recursive: true,
+					force: true,
+				}),
+			),
+		);
 	}
 }

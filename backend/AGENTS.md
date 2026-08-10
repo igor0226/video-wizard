@@ -52,7 +52,18 @@ Processing steps tracked in history: `queued`, `audio_extract`, `transcribing`, 
 
 - `GET /api/videos` — each item includes `processingStep` and `queuePosition` (`null` unless `status === "pending"`)
 - `GET /api/videos/:id/status` — adds `processingHistory` (full event log) plus `processingStep` and `queuePosition`
+- `POST /api/videos/:id/retry` — retry a **failed** video; returns `409` for non-failed videos, `404` if missing
 - `queuePosition` is computed at read time: 1-based index among pending videos sorted by `createdAt`
+
+### Retry failed videos
+
+`POST /api/videos/:id/retry`:
+
+1. Validates `status === "failed"`
+2. Reads the last failed resumable step from `videos/history/<videoId>.json` (`audio_extract`, `transcribing`, or `dash_encoding`)
+3. Clears artifacts for that step and any downstream steps (keeps upstream outputs so the worker skips completed work)
+4. Appends a history event (`message: "retry requested"`) and sets `currentStep` to the resume step
+5. Sets video record back to `pending` with `failureReason: null` — the cron worker picks it up on the next tick
 
 ### DASH
 

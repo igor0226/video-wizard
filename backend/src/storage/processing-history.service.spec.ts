@@ -86,4 +86,18 @@ describe("ProcessingHistoryService", () => {
 			message: "skipped (already present)",
 		});
 	});
+
+	it("records retry and sets current step to resume point", async () => {
+		await service.initHistory("video-1");
+		await service.recordFailure("video-1", "transcribing", "Whisper failed");
+
+		const history = await service.recordRetry("video-1", "transcribing");
+
+		expect(history.currentStep).toBe("transcribing");
+		expect(history.events.at(-1)).toMatchObject({
+			step: "transcribing",
+			status: "started",
+			message: "retry requested",
+		});
+	});
 });

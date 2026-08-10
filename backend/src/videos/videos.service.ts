@@ -1,7 +1,13 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+	ConflictException,
+	Injectable,
+	NotFoundException,
+} from "@nestjs/common";
 
 import {
+	BlobStorageService,
 	ProcessingHistoryService,
+	resolveResumeStep,
 	type ProcessingHistoryEvent,
 	type ProcessingStep,
 	VideoRepositoryService,
@@ -35,11 +41,20 @@ export type VideoStatusForApi = {
 	processingHistory: ProcessingHistoryEvent[];
 };
 
+export type VideoRetryForApi = {
+	id: string;
+	status: "pending";
+	resumeFromStep: ProcessingStep;
+	processingStep: ProcessingStep;
+	failureReason: null;
+};
+
 @Injectable()
 export class VideosService {
 	constructor(
 		private readonly videoRepository: VideoRepositoryService,
 		private readonly processingHistory: ProcessingHistoryService,
+		private readonly blobStorage: BlobStorageService,
 	) {}
 
 	async listVideosForApi(): Promise<VideoListItem[]> {
@@ -90,5 +105,33 @@ export class VideosService {
 
 	async createVideo(input: CreateVideoInput): Promise<VideoRecord> {
 		return this.videoRepository.createVideo(input);
+	}
+
+	async retryFailedVideo(videoId: string): Promise<VideoRetryForApi> {
+		const video = await this.getVideoRecordById(videoId);
+		if (video.status !== "failed") {
+			throw new ConflictException("Only failed videos can be retried");
+		}
+
+		const history = await this.processingHistory.getHistory(videoId);
+		const resumeFromStep = resolveResumeStep(history);
+
+		await this.blobStorage.clearProcessingArtifactsFromStep(
+			videoId,
+			resumeFromStep,
+		);
+		await this.processingHistory.recordRetry(videoId, resumeFromStep);
+		await this.videoRepository.updateVideo(videoId, {
+			status: "pending",
+			failureReason: null,
+		});
+
+		return {
+			id: videoId,
+			status: "pending",
+			resumeFromStep,
+			processingStep: resumeFromStep,
+			failureReason: null,
+		};
 	}
 }

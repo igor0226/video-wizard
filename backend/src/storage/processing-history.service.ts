@@ -118,6 +118,26 @@ export class ProcessingHistoryService {
 		});
 	}
 
+	async recordRetry(
+		videoId: string,
+		resumeFromStep: ProcessingStep,
+	): Promise<VideoProcessingHistory> {
+		const history = await this.getHistory(videoId);
+		const now = new Date().toISOString();
+		const event: ProcessingHistoryEvent = {
+			step: resumeFromStep,
+			status: "started",
+			at: now,
+			message: "retry requested",
+		};
+		return this.writeHistory({
+			...history,
+			currentStep: resumeFromStep,
+			events: [...history.events, event],
+			updatedAt: now,
+		});
+	}
+
 	async markCompleted(videoId: string): Promise<VideoProcessingHistory> {
 		const history = await this.getHistory(videoId);
 		const now = new Date().toISOString();
