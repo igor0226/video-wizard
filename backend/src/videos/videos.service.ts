@@ -45,7 +45,6 @@ export type VideoRetryForApi = {
 	id: string;
 	status: "pending";
 	resumeFromStep: ProcessingStep;
-	processingStep: ProcessingStep;
 	failureReason: null;
 };
 
@@ -130,7 +129,6 @@ export class VideosService {
 			id: videoId,
 			status: "pending",
 			resumeFromStep,
-			processingStep: resumeFromStep,
 			failureReason: null,
 		};
 	}

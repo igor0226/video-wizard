@@ -46,3 +46,10 @@ export type VideoStatusResponse = {
 	queuePosition: number | null;
 	processingHistory: ProcessingHistoryEvent[];
 };
+
+export type VideoRetryResponse = {
+	id: string;
+	status: "pending";
+	resumeFromStep: ProcessingStep;
+	failureReason: null;
+};

@@ -1,12 +1,19 @@
+"use client";
+
 import type { ProcessingHistoryEvent, ProcessingStep } from "../../types/video";
+
+import { RotateCw } from "lucide-react";
 
 import { formatEventAt } from "../../lib/format";
 import {
 	getProcessingEventStatusLabel,
 	getProcessingStepLabel,
 } from "../../lib/task-status";
+import { cn } from "../../lib/utils";
+import { Button } from "../ui/button";
 
 import "./ProcessingHistoryPanel.css";
+import { useMemo } from "react";
 
 type ProcessingHistoryPanelProps = {
 	events: ProcessingHistoryEvent[] | null;
@@ -14,6 +21,9 @@ type ProcessingHistoryPanelProps = {
 	queuePosition: number | null;
 	failureReason?: string | null;
 	isLoading?: boolean;
+	canRetry?: boolean;
+	onRetry?: () => void;
+	isRetrying?: boolean;
 };
 
 export function ProcessingHistoryPanel({
@@ -22,6 +32,9 @@ export function ProcessingHistoryPanel({
 	queuePosition,
 	failureReason,
 	isLoading = false,
+	canRetry = false,
+	onRetry,
+	isRetrying = false,
 }: ProcessingHistoryPanelProps) {
 	const metaParts: string[] = [];
 	if (currentStep) {
@@ -36,6 +49,13 @@ export function ProcessingHistoryPanel({
 		!(events ?? []).some(
 			(event) => event.status === "failed" && event.message === failureReason,
 		);
+
+	const lastFailedIndex = useMemo(() => {
+		if (!events) return -1;
+
+		const lastFailedIndex = [...events].reverse().findIndex((event) => event.status === "failed") ?? -1;
+		return lastFailedIndex === -1 ? -1 : events.length - lastFailedIndex - 1;
+	}, [events]);
 
 	return (
 		<section className="processingHistoryPanel" aria-label="Processing history">
@@ -59,6 +79,7 @@ export function ProcessingHistoryPanel({
 					{events.map((event, index) => {
 						const key = `${event.step}-${event.status}-${event.at}-${index}`;
 						const isLast = index === events.length - 1;
+						const showRetry = canRetry && index === lastFailedIndex;
 
 						return (
 							<li key={key} className="processingHistoryItem">
@@ -73,13 +94,35 @@ export function ProcessingHistoryPanel({
 									) : null}
 								</div>
 								<div className="processingHistoryContent">
-									<p className="processingHistoryStep">
-										{getProcessingStepLabel(event.step)}
-									</p>
-									<p className="processingHistoryStatus">
-										{getProcessingEventStatusLabel(event.status)} ·{" "}
-										{formatEventAt(event.at)}
-									</p>
+									<div className="processingHistoryRowHeader">
+										<div className="processingHistoryRowText">
+											<p className="processingHistoryStep">
+												{getProcessingStepLabel(event.step)}
+											</p>
+											<p className="processingHistoryStatus">
+												{getProcessingEventStatusLabel(event.status)} ·{" "}
+												{formatEventAt(event.at)}
+											</p>
+										</div>
+										{showRetry ? (
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												disabled={isRetrying}
+												onClick={onRetry}
+											>
+												<RotateCw
+													className={cn(
+														"size-3.5 shrink-0 mr-1",
+														isRetrying && "animate-spin",
+													)}
+													aria-hidden
+												/>
+												Retry
+											</Button>
+										) : null}
+									</div>
 									{event.message ? (
 										<p
 											className="processingHistoryMessage"

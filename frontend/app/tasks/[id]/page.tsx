@@ -9,6 +9,7 @@ import { useEffect, useMemo } from "react";
 import { AppPageHeader } from "../../components/AppPageHeader/AppPageHeader";
 import { PlayerPanel } from "../../components/PlayerPanel/PlayerPanel";
 import { ProcessingHistoryPanel } from "../../components/ProcessingHistoryPanel/ProcessingHistoryPanel";
+import { useRetryVideo } from "../../hooks/useRetryVideo";
 import { apiUrl } from "../../lib/api";
 
 import "../../styles/tasks-page.css";
@@ -37,6 +38,7 @@ export default function TaskDetailPage() {
 	const params = useParams<{ id: string }>();
 	const videoId = params.id;
 	const queryClient = useQueryClient();
+	const { retryVideo, isRetrying } = useRetryVideo(videoId);
 
 	const videosQuery = useQuery({
 		queryKey: ["videos"],
@@ -119,6 +121,9 @@ export default function TaskDetailPage() {
 					queuePosition={queuePosition}
 					failureReason={failureReason}
 					isLoading={statusQuery.isLoading}
+					canRetry={statusData?.status === "failed"}
+					onRetry={() => retryVideo()}
+					isRetrying={isRetrying}
 				/>
 
 				{pageError ? <p className="tasksPageError">{pageError}</p> : null}
