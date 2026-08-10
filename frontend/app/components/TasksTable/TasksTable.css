@@ -22,6 +22,14 @@
 	@apply inline-flex items-center gap-2;
 }
 
+.tasksStatusText {
+	@apply flex flex-col gap-0.5 leading-tight;
+}
+
+.tasksStatusDetail {
+	@apply text-xs text-muted-foreground;
+}
+
 .tasksEmptyCell {
 	@apply text-center text-muted-foreground p-8;
 }
