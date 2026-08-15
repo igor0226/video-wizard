@@ -17,6 +17,7 @@ const DASH_DIR = "dash";
 const RECORDS_DIR = "records";
 const AUDIO_DIR = "audio";
 const TRANSCRIPTS_DIR = "transcripts";
+const EXPLANATIONS_DIR = "explanations";
 const HISTORY_DIR = "history";
 
 async function ensureDir(dirPath: string): Promise<void> {
@@ -41,6 +42,7 @@ export class BlobStorageService {
 			ensureDir(path.join(storageRoot, RECORDS_DIR)),
 			ensureDir(path.join(storageRoot, AUDIO_DIR)),
 			ensureDir(path.join(storageRoot, TRANSCRIPTS_DIR)),
+			ensureDir(path.join(storageRoot, EXPLANATIONS_DIR)),
 			ensureDir(path.join(storageRoot, HISTORY_DIR)),
 		]);
 	}
@@ -142,6 +144,14 @@ export class BlobStorageService {
 		return path.posix.join(TRANSCRIPTS_DIR, videoId);
 	}
 
+	getPhrasesRelativePath(videoId: string): string {
+		return path.posix.join(EXPLANATIONS_DIR, videoId, "phrases.json");
+	}
+
+	getExplanationsDirectoryRelativePath(videoId: string): string {
+		return path.posix.join(EXPLANATIONS_DIR, videoId);
+	}
+
 	getDashDirectoryRelativePath(videoId: string): string {
 		return path.posix.join(DASH_DIR, videoId);
 	}
@@ -156,11 +166,18 @@ export class BlobStorageService {
 			directories.push(
 				this.getAudioDirectoryRelativePath(videoId),
 				this.getTranscriptDirectoryRelativePath(videoId),
+				this.getExplanationsDirectoryRelativePath(videoId),
 				this.getDashDirectoryRelativePath(videoId),
 			);
 		} else if (fromStep === "transcribing") {
 			directories.push(
 				this.getTranscriptDirectoryRelativePath(videoId),
+				this.getExplanationsDirectoryRelativePath(videoId),
+				this.getDashDirectoryRelativePath(videoId),
+			);
+		} else if (fromStep === "detecting_phrases") {
+			directories.push(
+				this.getExplanationsDirectoryRelativePath(videoId),
 				this.getDashDirectoryRelativePath(videoId),
 			);
 		} else if (fromStep === "dash_encoding") {

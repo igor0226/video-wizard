@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BlobStorageService } from "../storage";
-import type { VideoRecord } from "../storage/types";
+import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
 import { FfmpegAudioService } from "./ffmpeg-audio.service";
 import * as ffmpegProcess from "./ffmpeg-process";
 
@@ -13,22 +13,7 @@ vi.mock("./ffmpeg-process", () => ({
 }));
 
 describe("FfmpegAudioService", () => {
-	const video: VideoRecord = {
-		id: "video-1",
-		title: "Test",
-		originalFileName: "clip.mp4",
-		mimeType: "video/mp4",
-		sizeBytes: 100,
-		sourceRelativePath: "uploads/video-1/clip.mp4",
-		dashRelativePath: "dash/video-1",
-		manifestFileName: "manifest.mpd",
-		status: "processing",
-		segmentCount: 0,
-		createdAt: "2026-01-01T00:00:00.000Z",
-		updatedAt: "2026-01-01T00:00:00.000Z",
-		failureReason: null,
-		transcriptRelativePath: null,
-	};
+	const video = makeTestVideoRecord({ status: "processing" });
 
 	let blobStorage: BlobStorageService;
 	let service: FfmpegAudioService;

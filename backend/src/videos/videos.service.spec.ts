@@ -2,25 +2,14 @@ import { ConflictException, NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { VideoRecord } from "../storage/types";
+import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
 import { VideosService } from "./videos.service";
 
 describe("VideosService", () => {
-	const video: VideoRecord = {
-		id: "video-1",
-		title: "Test",
-		originalFileName: "clip.mp4",
-		mimeType: "video/mp4",
-		sizeBytes: 100,
-		sourceRelativePath: "uploads/video-1/clip.mp4",
-		dashRelativePath: "dash/video-1",
-		manifestFileName: "manifest.mpd",
+	const video = makeTestVideoRecord({
 		status: "failed",
-		segmentCount: 0,
-		createdAt: "2026-01-01T00:00:00.000Z",
-		updatedAt: "2026-01-01T00:00:00.000Z",
 		failureReason: "Whisper failed",
-		transcriptRelativePath: null,
-	};
+	});
 
 	let service: VideosService;
 	const videoRepository = {

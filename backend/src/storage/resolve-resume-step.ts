@@ -3,6 +3,7 @@ import type { ProcessingStep, VideoProcessingHistory } from "./types";
 const RESUMABLE_STEPS = [
 	"audio_extract",
 	"transcribing",
+	"detecting_phrases",
 	"dash_encoding",
 ] as const satisfies readonly ProcessingStep[];
 

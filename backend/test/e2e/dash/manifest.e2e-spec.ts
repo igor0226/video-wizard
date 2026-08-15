@@ -12,6 +12,9 @@ describe("DASH manifest (e2e)", () => {
 		const uploadResponse = await request(getApp().getHttpServer())
 			.post("/api/videos/upload")
 			.field("title", "Pending for manifest")
+			.field("sourceLanguage", "English")
+			.field("explanationLanguage", "English")
+			.field("languageLevel", "B1")
 			.attach("file", Buffer.from("fake-video-bytes"), {
 				filename: "clip.mp4",
 				contentType: "video/mp4",

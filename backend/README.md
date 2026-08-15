@@ -30,7 +30,7 @@ API: [http://localhost:3001](http://localhost:3001) (global prefix `/api`)
 
 ## Main endpoints
 
-- `POST /api/videos/upload` — upload a source video
+- `POST /api/videos/upload` — upload a source video (requires `title`, `file`, `sourceLanguage`, `explanationLanguage`, `languageLevel`)
 - `GET /api/videos` — list videos
 - `GET /api/videos/:id` — video status/detail
 - `GET /api/dash/:id/manifest.mpd` — DASH manifest (BaseURL rewritten at serve time)
@@ -44,6 +44,7 @@ Assets live under repo-root `videos/` by default:
 - `dash/<videoId>/` — `manifest.mpd` + segments
 - `audio/<videoId>/` — extracted MP3 for transcription
 - `transcripts/<videoId>/` — Whisper transcript JSON
+- `explanations/<videoId>/` — detected phrases JSON (`phrases.json`)
 - `records/<videoId>.json` — video records
 - `locks/<videoId>.lock` — worker concurrency locks
 

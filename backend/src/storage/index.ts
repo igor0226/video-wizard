@@ -3,6 +3,7 @@ export { ProcessingHistoryService } from "./processing-history.service";
 export { StorageModule } from "./storage.module";
 export type {
 	CreateVideoInput,
+	LanguageLevel,
 	ProcessingEventStatus,
 	ProcessingHistoryEvent,
 	ProcessingStep,

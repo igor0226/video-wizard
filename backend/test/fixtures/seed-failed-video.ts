@@ -44,6 +44,10 @@ export async function seedFailedVideo(
 		updatedAt: nowIso,
 		failureReason: "Whisper failed",
 		transcriptRelativePath: null,
+		phrasesRelativePath: null,
+		sourceLanguage: "English",
+		explanationLanguage: "English",
+		languageLevel: "B1",
 	};
 
 	const history = {

@@ -22,6 +22,11 @@ export type TranscribeResult = {
 	transcriptRelativePath: string;
 };
 
+export type TranscribeInput = {
+	video: VideoRecord;
+	audioResult: ExtractAudioResult;
+};
+
 @Injectable()
 export class WhisperTranscriptionService {
 	private openaiClient: OpenAI | null = null;
@@ -32,10 +37,8 @@ export class WhisperTranscriptionService {
 		private readonly blobStorage: BlobStorageService,
 	) {}
 
-	async transcribe(
-		video: VideoRecord,
-		audioResult: ExtractAudioResult,
-	): Promise<TranscribeResult> {
+	async transcribe(input: TranscribeInput): Promise<TranscribeResult> {
+		const { video, audioResult } = input;
 		const apiKey = process.env.OPENAI_API_KEY?.trim();
 		if (!apiKey) {
 			throw new Error("OPENAI_API_KEY is required for transcription");
@@ -124,12 +127,12 @@ export class WhisperTranscriptionService {
 			const chunkAbsolutePath =
 				this.blobStorage.resolveRelativePath(chunkRelativePath);
 
-			await this.extractAudioChunk(
-				audioAbsolutePath,
-				chunkAbsolutePath,
+			await this.extractAudioChunk({
+				sourceAbsolutePath: audioAbsolutePath,
+				outputAbsolutePath: chunkAbsolutePath,
 				startSeconds,
-				chunkDurationSeconds,
-			);
+				durationSeconds: chunkDurationSeconds,
+			});
 
 			this.logger.info(
 				{
@@ -176,12 +179,18 @@ export class WhisperTranscriptionService {
 		}
 	}
 
-	private async extractAudioChunk(
-		sourceAbsolutePath: string,
-		outputAbsolutePath: string,
-		startSeconds: number,
-		durationSeconds: number,
-	): Promise<void> {
+	private async extractAudioChunk(input: {
+		sourceAbsolutePath: string;
+		outputAbsolutePath: string;
+		startSeconds: number;
+		durationSeconds: number;
+	}): Promise<void> {
+		const {
+			sourceAbsolutePath,
+			outputAbsolutePath,
+			startSeconds,
+			durationSeconds,
+		} = input;
 		const args = [
 			"-y",
 			"-ss",

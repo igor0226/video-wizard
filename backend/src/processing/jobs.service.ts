@@ -7,21 +7,29 @@ import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 import {
 	BlobStorageService,
 	ProcessingHistoryService,
-	type ProcessingStep,
 	type VideoRecord,
 	VideoRepositoryService,
 } from "../storage";
 import { FfmpegAudioService } from "./ffmpeg-audio.service";
 import { FfmpegDashService } from "./ffmpeg-dash.service";
+import { PhraseDetectionService } from "./phrase-detection.service";
+import {
+	executeProcessingStep,
+	getFailedStep,
+	normalizeFailureMessage,
+	skipProcessingStep,
+} from "./processing-step-runner";
 import { WhisperTranscriptionService } from "./transcription.service";
 
 type ExtractAudioResult = { audioRelativePath: string };
 type TranscriptResult = { transcriptRelativePath: string };
+type PhrasesResult = { phrasesRelativePath: string };
 type DashResult = { segmentCount: number };
 
 type ProcessingResults = {
 	audio: ExtractAudioResult;
 	transcript: TranscriptResult;
+	phrases: PhrasesResult;
 	dash: DashResult;
 };
 
@@ -30,29 +38,10 @@ type VideoLock = {
 	path: string;
 };
 
-class StepFailedError extends Error {
-	constructor(
-		readonly step: ProcessingStep,
-		cause: unknown,
-	) {
-		super(normalizeFailureMessage(cause));
-		this.name = "StepFailedError";
-	}
-}
-
-function normalizeFailureMessage(error: unknown): string {
-	if (error instanceof Error) {
-		return error.message.slice(0, 400);
-	}
-	return "Unexpected processing error";
-}
-
-function getFailedStep(error: unknown): ProcessingStep {
-	if (error instanceof StepFailedError) {
-		return error.step;
-	}
-	return "audio_extract";
-}
+type StepRunnerDeps = {
+	processingHistory: ProcessingHistoryService;
+	logger: PinoLogger;
+};
 
 @Injectable()
 export class JobsService {
@@ -62,10 +51,18 @@ export class JobsService {
 		private readonly ffmpegDashService: FfmpegDashService,
 		private readonly ffmpegAudioService: FfmpegAudioService,
 		private readonly transcriptionService: WhisperTranscriptionService,
+		private readonly phraseDetectionService: PhraseDetectionService,
 		private readonly videoRepository: VideoRepositoryService,
 		private readonly blobStorage: BlobStorageService,
 		private readonly processingHistory: ProcessingHistoryService,
 	) {}
+
+	private getStepRunnerDeps(): StepRunnerDeps {
+		return {
+			processingHistory: this.processingHistory,
+			logger: this.logger,
+		};
+	}
 
 	async processNextPendingVideo(): Promise<void> {
 		const video = await this.pickNextVideo();
@@ -155,8 +152,9 @@ export class JobsService {
 	): Promise<ProcessingResults> {
 		const audio = await this.extractAudioIfNeeded(video);
 		const transcript = await this.transcribeIfNeeded(video, audio);
+		const phrases = await this.detectPhrasesIfNeeded(video, transcript);
 		const dash = await this.encodeDashIfNeeded(video);
-		return { audio, transcript, dash };
+		return { audio, transcript, phrases, dash };
 	}
 
 	private async extractAudioIfNeeded(
@@ -165,16 +163,21 @@ export class JobsService {
 		const audioRelativePath = this.blobStorage.getAudioRelativePath(video.id);
 
 		if (await this.blobStorage.fileExists(audioRelativePath)) {
-			return this.skipStep(video, "audio_extract", "audio-extract-skip", {
-				audioRelativePath,
+			return skipProcessingStep({
+				deps: this.getStepRunnerDeps(),
+				videoId: video.id,
+				step: "audio_extract",
+				logMessage: "audio-extract-skip",
+				result: { audioRelativePath },
 			});
 		}
 
-		return this.executeStep(
-			video,
-			"audio_extract",
-			"audio-extract-start",
-			async () => {
+		return executeProcessingStep({
+			deps: this.getStepRunnerDeps(),
+			videoId: video.id,
+			step: "audio_extract",
+			startLogMessage: "audio-extract-start",
+			run: async () => {
 				const result = await this.ffmpegAudioService.extractAudio(video);
 				this.logger.info(
 					{ videoId: video.id, audioPath: result.audioRelativePath },
@@ -182,7 +185,7 @@ export class JobsService {
 				);
 				return result;
 			},
-		);
+		});
 	}
 
 	private async transcribeIfNeeded(
@@ -194,17 +197,25 @@ export class JobsService {
 		);
 
 		if (await this.blobStorage.fileExists(transcriptRelativePath)) {
-			return this.skipStep(video, "transcribing", "transcription-skip", {
-				transcriptRelativePath,
+			return skipProcessingStep({
+				deps: this.getStepRunnerDeps(),
+				videoId: video.id,
+				step: "transcribing",
+				logMessage: "transcription-skip",
+				result: { transcriptRelativePath },
 			});
 		}
 
-		return this.executeStep(
-			video,
-			"transcribing",
-			"transcription-start",
-			async () => {
-				const result = await this.transcriptionService.transcribe(video, audio);
+		return executeProcessingStep({
+			deps: this.getStepRunnerDeps(),
+			videoId: video.id,
+			step: "transcribing",
+			startLogMessage: "transcription-start",
+			run: async () => {
+				const result = await this.transcriptionService.transcribe({
+					video,
+					audioResult: audio,
+				});
 				this.logger.info(
 					{
 						videoId: video.id,
@@ -214,7 +225,47 @@ export class JobsService {
 				);
 				return result;
 			},
+		});
+	}
+
+	private async detectPhrasesIfNeeded(
+		video: VideoRecord,
+		transcript: TranscriptResult,
+	): Promise<PhrasesResult> {
+		const phrasesRelativePath = this.blobStorage.getPhrasesRelativePath(
+			video.id,
 		);
+
+		if (await this.blobStorage.fileExists(phrasesRelativePath)) {
+			return skipProcessingStep({
+				deps: this.getStepRunnerDeps(),
+				videoId: video.id,
+				step: "detecting_phrases",
+				logMessage: "phrase-detection-skip",
+				result: { phrasesRelativePath },
+			});
+		}
+
+		return executeProcessingStep({
+			deps: this.getStepRunnerDeps(),
+			videoId: video.id,
+			step: "detecting_phrases",
+			startLogMessage: "phrase-detection-start",
+			run: async () => {
+				const result = await this.phraseDetectionService.detectPhrases({
+					video,
+					transcriptRelativePath: transcript.transcriptRelativePath,
+				});
+				this.logger.info(
+					{
+						videoId: video.id,
+						phrasesPath: result.phrasesRelativePath,
+					},
+					"phrase-detection-complete",
+				);
+				return result;
+			},
+		});
 	}
 
 	private async encodeDashIfNeeded(video: VideoRecord): Promise<DashResult> {
@@ -224,16 +275,21 @@ export class JobsService {
 		);
 
 		if (await this.blobStorage.fileExists(manifestRelativePath)) {
-			return this.skipStep(video, "dash_encoding", "transcode-skip", {
-				segmentCount: video.segmentCount,
+			return skipProcessingStep({
+				deps: this.getStepRunnerDeps(),
+				videoId: video.id,
+				step: "dash_encoding",
+				logMessage: "transcode-skip",
+				result: { segmentCount: video.segmentCount },
 			});
 		}
 
-		return this.executeStep(
-			video,
-			"dash_encoding",
-			"transcode-start",
-			async () => {
+		return executeProcessingStep({
+			deps: this.getStepRunnerDeps(),
+			videoId: video.id,
+			step: "dash_encoding",
+			startLogMessage: "transcode-start",
+			run: async () => {
 				const result = await this.ffmpegDashService.generateDashAssets(video);
 				this.logger.info(
 					{ videoId: video.id, segments: result.segmentCount },
@@ -241,40 +297,7 @@ export class JobsService {
 				);
 				return result;
 			},
-		);
-	}
-
-	private async skipStep<T>(
-		video: VideoRecord,
-		step: ProcessingStep,
-		logMessage: string,
-		result: T,
-	): Promise<T> {
-		this.logger.info({ videoId: video.id }, logMessage);
-		await this.processingHistory.recordStepComplete(
-			video.id,
-			step,
-			"skipped (already present)",
-		);
-		return result;
-	}
-
-	private async executeStep<T>(
-		video: VideoRecord,
-		step: ProcessingStep,
-		startLogMessage: string,
-		run: () => Promise<T>,
-	): Promise<T> {
-		this.logger.info({ videoId: video.id }, startLogMessage);
-		await this.processingHistory.recordStepStart(video.id, step);
-
-		try {
-			const result = await run();
-			await this.processingHistory.recordStepComplete(video.id, step);
-			return result;
-		} catch (error) {
-			throw new StepFailedError(step, error);
-		}
+		});
 	}
 
 	private async finishVideoSuccessfully(
@@ -287,6 +310,7 @@ export class JobsService {
 			status: "ready",
 			segmentCount: results.dash.segmentCount,
 			transcriptRelativePath: results.transcript.transcriptRelativePath,
+			phrasesRelativePath: results.phrases.phrasesRelativePath,
 			failureReason: null,
 		});
 		this.logger.info({ videoId: video.id, status: "ready" }, "done");
@@ -302,7 +326,11 @@ export class JobsService {
 			{ videoId: video.id, step, reason: failureReason },
 			"processing-failed",
 		);
-		await this.processingHistory.recordFailure(video.id, step, failureReason);
+		await this.processingHistory.recordFailure({
+			videoId: video.id,
+			step,
+			message: failureReason,
+		});
 		await this.videoRepository.updateVideo(video.id, {
 			status: "failed",
 			failureReason,

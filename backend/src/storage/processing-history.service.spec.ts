@@ -43,9 +43,16 @@ describe("ProcessingHistoryService", () => {
 	it("records step start, complete, failure, and completion", async () => {
 		await service.initHistory("video-1");
 		await service.recordStepStart("video-1", "audio_extract");
-		await service.recordStepComplete("video-1", "audio_extract");
+		await service.recordStepComplete({
+			videoId: "video-1",
+			step: "audio_extract",
+		});
 		await service.recordStepStart("video-1", "transcribing");
-		await service.recordFailure("video-1", "transcribing", "Whisper failed");
+		await service.recordFailure({
+			videoId: "video-1",
+			step: "transcribing",
+			message: "Whisper failed",
+		});
 		await service.initHistory("video-2");
 		await service.markCompleted("video-2");
 
@@ -73,11 +80,11 @@ describe("ProcessingHistoryService", () => {
 
 	it("records skipped step completion with message", async () => {
 		await service.initHistory("video-1");
-		await service.recordStepComplete(
-			"video-1",
-			"audio_extract",
-			"skipped (already present)",
-		);
+		await service.recordStepComplete({
+			videoId: "video-1",
+			step: "audio_extract",
+			message: "skipped (already present)",
+		});
 
 		const history = await service.getHistory("video-1");
 		expect(history.events.at(-1)).toMatchObject({
@@ -89,7 +96,11 @@ describe("ProcessingHistoryService", () => {
 
 	it("records retry and sets current step to resume point", async () => {
 		await service.initHistory("video-1");
-		await service.recordFailure("video-1", "transcribing", "Whisper failed");
+		await service.recordFailure({
+			videoId: "video-1",
+			step: "transcribing",
+			message: "Whisper failed",
+		});
 
 		const history = await service.recordRetry("video-1", "transcribing");
 

@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BlobStorageService } from "../storage";
-import type { VideoRecord } from "../storage/types";
+import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
 import type { ExtractAudioResult } from "./ffmpeg-audio.service";
 import { WhisperTranscriptionService } from "./transcription.service";
 
@@ -28,22 +28,7 @@ vi.mock("node:fs", async (importOriginal) => {
 });
 
 describe("WhisperTranscriptionService", () => {
-	const video: VideoRecord = {
-		id: "video-1",
-		title: "Test",
-		originalFileName: "clip.mp4",
-		mimeType: "video/mp4",
-		sizeBytes: 100,
-		sourceRelativePath: "uploads/video-1/clip.mp4",
-		dashRelativePath: "dash/video-1",
-		manifestFileName: "manifest.mpd",
-		status: "processing",
-		segmentCount: 0,
-		createdAt: "2026-01-01T00:00:00.000Z",
-		updatedAt: "2026-01-01T00:00:00.000Z",
-		failureReason: null,
-		transcriptRelativePath: null,
-	};
+	const video = makeTestVideoRecord({ status: "processing" });
 	const audioResult: ExtractAudioResult = {
 		audioRelativePath: "audio/video-1/track.mp3",
 	};
@@ -79,7 +64,7 @@ describe("WhisperTranscriptionService", () => {
 			words: [{ word: "hello", start: 0, end: 0.5 }],
 		});
 
-		const result = await service.transcribe(video, audioResult);
+		const result = await service.transcribe({ video, audioResult });
 
 		expect(createReadStream).toHaveBeenCalledWith(
 			"/tmp/audio/video-1/track.mp3",
@@ -105,7 +90,7 @@ describe("WhisperTranscriptionService", () => {
 	it("fails fast when OPENAI_API_KEY is missing", async () => {
 		delete process.env.OPENAI_API_KEY;
 
-		await expect(service.transcribe(video, audioResult)).rejects.toThrow(
+		await expect(service.transcribe({ video, audioResult })).rejects.toThrow(
 			"OPENAI_API_KEY is required for transcription",
 		);
 	});
