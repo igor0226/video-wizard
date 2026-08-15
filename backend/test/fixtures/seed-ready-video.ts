@@ -43,6 +43,10 @@ export async function seedReadyVideo(
 		updatedAt: nowIso,
 		failureReason: null,
 		transcriptRelativePath: null,
+		phrasesRelativePath: null,
+		sourceLanguage: "English",
+		explanationLanguage: "English",
+		languageLevel: "B1",
 	};
 
 	const manifestContent = [

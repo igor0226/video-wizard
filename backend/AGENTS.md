@@ -1,11 +1,13 @@
 # Backend Agent Notes
 
+Make sure to read the AGENTS.md file in the parent direction.
+
 ## Architecture
 
 Nest.js app under `src/` with feature modules:
 
 - `videos/` — list/upload/status HTTP API
-- `processing/` — cron worker, jobs, FFmpeg DASH generation, audio extraction, Whisper transcription
+- `processing/` — cron worker, jobs, FFmpeg DASH generation, audio extraction, Whisper transcription, phrase detection
 - `dash/` — manifest rewrite + segment serving
 - `storage/` — filesystem storage + video record repository
 
@@ -30,23 +32,35 @@ Nest.js app under `src/` with feature modules:
 - `videos/dash/<videoId>/manifest.mpd` + segments
 - `videos/audio/<videoId>/track.mp3` — extracted mono MP3 for transcription
 - `videos/transcripts/<videoId>/transcript.json` — Whisper verbose JSON (word timestamps)
-- `videos/records/<videoId>.json`
+- `videos/explanations/<videoId>/phrases.json` — detected tricky phrases with word indexes and explanations
+- `videos/records/<videoId>.json` — includes `sourceLanguage`, `explanationLanguage`, `languageLevel`
 - `videos/history/<videoId>.json` — processing step history (events + current step)
 - `videos/locks/<videoId>.lock` (worker concurrency guard)
 
 ### Processing pipeline
 
-Worker order for each pending video: **audio extract → Whisper transcribe → DASH transcode → ready**.
+Worker order for each pending video: **audio extract → Whisper transcribe → phrase detection → DASH transcode → ready**.
 
 - `FfmpegAudioService` — extracts mono 16 kHz MP3 (`audio/<videoId>/track.mp3`); fails if no audio track
 - `WhisperTranscriptionService` — OpenAI `whisper-1` with `verbose_json` + word timestamps; writes `transcripts/<videoId>/transcript.json`
+- `PhraseDetectionService` — OpenAI `gpt-5.6-luna` with structured JSON output; writes `explanations/<videoId>/phrases.json`
 - `FfmpegDashService` — DASH packaging
 - Files > 24 MB are split into ~10-minute chunks before transcription and merged with offset word timestamps
-- `OPENAI_API_KEY` is required when the worker runs transcription
+- `OPENAI_API_KEY` is required when the worker runs transcription or phrase detection
 - Any step failure marks the video `failed` and records the failing step in history
 - Completed steps are skipped on resume when their output files already exist
 
-Processing steps tracked in history: `queued`, `audio_extract`, `transcribing`, `dash_encoding`, `completed`, `failed`.
+Processing steps tracked in history: `queued`, `audio_extract`, `transcribing`, `detecting_phrases`, `dash_encoding`, `completed`, `failed`.
+
+### Upload language fields
+
+`POST /api/videos/upload` requires multipart fields:
+
+- `sourceLanguage` — source language spoken in the video
+- `explanationLanguage` — language for AI-generated explanations
+- `languageLevel` — learner CEFR level (`A1`–`C2`, case-insensitive)
+
+These are stored on the video record and passed into the phrase-detection prompt.
 
 ### Video API processing fields
 
@@ -60,7 +74,7 @@ Processing steps tracked in history: `queued`, `audio_extract`, `transcribing`, 
 `POST /api/videos/:id/retry`:
 
 1. Validates `status === "failed"`
-2. Reads the last failed resumable step from `videos/history/<videoId>.json` (`audio_extract`, `transcribing`, or `dash_encoding`)
+2. Reads the last failed resumable step from `videos/history/<videoId>.json` (`audio_extract`, `transcribing`, `detecting_phrases`, or `dash_encoding`)
 3. Clears artifacts for that step and any downstream steps (keeps upstream outputs so the worker skips completed work)
 4. Appends a history event (`message: "retry requested"`) and sets `currentStep` to the resume step
 5. Sets video record back to `pending` with `failureReason: null` — the cron worker picks it up on the next tick
@@ -91,5 +105,6 @@ Processing steps tracked in history: `queued`, `audio_extract`, `transcribing`, 
 
 From `backend/`:
 
+- **Hard rule:** functions should not receive more than 2 parameters. If the function's logic requires so, pass the paramaters grouped in an object.
 - **Hard rule:** before commit, `npm run lint:fix`
 - **Hard rule:** `npm run typecheck && npm run lint && npm run test && npm run test:e2e`

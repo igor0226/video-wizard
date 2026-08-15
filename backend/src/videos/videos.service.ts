@@ -28,6 +28,9 @@ export type VideoListItem = {
 	failureReason: string | null;
 	processingStep: ProcessingStep;
 	queuePosition: number | null;
+	sourceLanguage: string;
+	explanationLanguage: string;
+	languageLevel: VideoRecord["languageLevel"];
 };
 
 export type VideoStatusForApi = {
@@ -39,6 +42,9 @@ export type VideoStatusForApi = {
 	processingStep: ProcessingStep;
 	queuePosition: number | null;
 	processingHistory: ProcessingHistoryEvent[];
+	sourceLanguage: string;
+	explanationLanguage: string;
+	languageLevel: VideoRecord["languageLevel"];
 };
 
 export type VideoRetryForApi = {
@@ -74,6 +80,9 @@ export class VideosService {
 			failureReason: video.failureReason,
 			processingStep: histories[index].currentStep,
 			queuePosition: getQueuePosition(video, videos),
+			sourceLanguage: video.sourceLanguage,
+			explanationLanguage: video.explanationLanguage,
+			languageLevel: video.languageLevel,
 		}));
 	}
 
@@ -91,6 +100,9 @@ export class VideosService {
 			processingStep: history.currentStep,
 			queuePosition: getQueuePosition(video, allVideos),
 			processingHistory: history.events,
+			sourceLanguage: video.sourceLanguage,
+			explanationLanguage: video.explanationLanguage,
+			languageLevel: video.languageLevel,
 		};
 	}
 

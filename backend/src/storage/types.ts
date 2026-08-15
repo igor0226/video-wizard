@@ -4,6 +4,8 @@ export type VideoProcessingStatus =
 	| "ready"
 	| "failed";
 
+export type LanguageLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+
 export type VideoRecord = {
 	id: string;
 	title: string;
@@ -19,6 +21,10 @@ export type VideoRecord = {
 	updatedAt: string;
 	failureReason: string | null;
 	transcriptRelativePath: string | null;
+	phrasesRelativePath: string | null;
+	sourceLanguage: string;
+	explanationLanguage: string;
+	languageLevel: LanguageLevel;
 };
 
 export type CreateVideoInput = {
@@ -27,12 +33,16 @@ export type CreateVideoInput = {
 	mimeType: string;
 	sizeBytes: number;
 	fileBuffer: Buffer;
+	sourceLanguage: string;
+	explanationLanguage: string;
+	languageLevel: LanguageLevel;
 };
 
 export type ProcessingStep =
 	| "queued"
 	| "audio_extract"
 	| "transcribing"
+	| "detecting_phrases"
 	| "dash_encoding"
 	| "completed"
 	| "failed";

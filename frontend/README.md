@@ -31,17 +31,6 @@ Create `frontend/.env.local` if you need a non-default API URL:
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-## Scripts
-
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start Next.js dev server |
-| `npm run build` | Production build |
-| `npm run start` | Serve production build |
-| `npm run lint:fix` | Format + autofix with Biome |
-| `npm run typecheck` | TypeScript check |
-| `npm run lint` | Biome lint |
-
 ## Routes
 
 - `/` — tasks list

@@ -26,6 +26,8 @@ export function getProcessingStepLabel(step: ProcessingStep): string {
 			return "Extracting audio";
 		case "transcribing":
 			return "Transcribing";
+		case "detecting_phrases":
+			return "Detecting phrases";
 		case "dash_encoding":
 			return "Encoding DASH";
 		case "completed":

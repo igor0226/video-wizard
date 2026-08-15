@@ -39,6 +39,10 @@ async function readRecordFile(recordPath: string): Promise<VideoRecord> {
 	return {
 		...parsed,
 		transcriptRelativePath: parsed.transcriptRelativePath ?? null,
+		phrasesRelativePath: parsed.phrasesRelativePath ?? null,
+		sourceLanguage: parsed.sourceLanguage ?? "",
+		explanationLanguage: parsed.explanationLanguage ?? "",
+		languageLevel: parsed.languageLevel ?? "B1",
 	} as VideoRecord;
 }
 
@@ -86,6 +90,10 @@ export class VideoRepositoryService {
 			updatedAt: nowIso,
 			failureReason: null,
 			transcriptRelativePath: null,
+			phrasesRelativePath: null,
+			sourceLanguage: input.sourceLanguage,
+			explanationLanguage: input.explanationLanguage,
+			languageLevel: input.languageLevel,
 		};
 
 		await this.blobStorage.writeUploadFile(

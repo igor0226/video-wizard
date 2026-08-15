@@ -5,10 +5,11 @@ import {
 	ProcessingHistoryService,
 	VideoRepositoryService,
 } from "../storage";
-import type { VideoRecord } from "../storage/types";
+import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
 import { FfmpegAudioService } from "./ffmpeg-audio.service";
 import { FfmpegDashService } from "./ffmpeg-dash.service";
 import { JobsService } from "./jobs.service";
+import { PhraseDetectionService } from "./phrase-detection.service";
 import { WhisperTranscriptionService } from "./transcription.service";
 
 vi.mock("node:fs/promises", () => ({
@@ -20,27 +21,13 @@ vi.mock("node:fs/promises", () => ({
 }));
 
 describe("JobsService", () => {
-	const video: VideoRecord = {
-		id: "video-1",
-		title: "Test",
-		originalFileName: "clip.mp4",
-		mimeType: "video/mp4",
-		sizeBytes: 100,
-		sourceRelativePath: "uploads/video-1/clip.mp4",
-		dashRelativePath: "dash/video-1",
-		manifestFileName: "manifest.mpd",
-		status: "pending",
-		segmentCount: 0,
-		createdAt: "2026-01-01T00:00:00.000Z",
-		updatedAt: "2026-01-01T00:00:00.000Z",
-		failureReason: null,
-		transcriptRelativePath: null,
-	};
+	const video = makeTestVideoRecord();
 
 	let service: JobsService;
 	let ffmpegDashService: FfmpegDashService;
 	let ffmpegAudioService: FfmpegAudioService;
 	let transcriptionService: WhisperTranscriptionService;
+	let phraseDetectionService: PhraseDetectionService;
 	let videoRepository: VideoRepositoryService;
 	let blobStorage: BlobStorageService;
 	let processingHistory: ProcessingHistoryService;
@@ -71,6 +58,14 @@ describe("JobsService", () => {
 				};
 			}),
 		} as unknown as WhisperTranscriptionService;
+		phraseDetectionService = {
+			detectPhrases: vi.fn(async () => {
+				callOrder.push("phrases");
+				return {
+					phrasesRelativePath: "explanations/video-1/phrases.json",
+				};
+			}),
+		} as unknown as PhraseDetectionService;
 		videoRepository = {
 			listVideos: vi.fn(async () => [video]),
 			updateVideo: vi.fn(async (_id, patch) => {
@@ -99,6 +94,7 @@ describe("JobsService", () => {
 			getTranscriptRelativePath: vi.fn(
 				() => "transcripts/video-1/transcript.json",
 			),
+			getPhrasesRelativePath: vi.fn(() => "explanations/video-1/phrases.json"),
 			fileExists: vi.fn(async (relativePath: string) =>
 				existingFiles.has(relativePath),
 			),
@@ -109,19 +105,21 @@ describe("JobsService", () => {
 			ffmpegDashService,
 			ffmpegAudioService,
 			transcriptionService,
+			phraseDetectionService,
 			videoRepository,
 			blobStorage,
 			processingHistory,
 		);
 	});
 
-	it("runs audio extraction, transcription, and DASH before marking ready", async () => {
+	it("runs audio extraction, transcription, phrase detection, and DASH before marking ready", async () => {
 		await service.processNextPendingVideo();
 
 		expect(callOrder).toEqual([
 			"mark-processing",
 			"audio",
 			"transcribe",
+			"phrases",
 			"dash",
 			"mark-completed",
 			"mark-ready",
@@ -130,15 +128,17 @@ describe("JobsService", () => {
 			status: "ready",
 			segmentCount: 3,
 			transcriptRelativePath: "transcripts/video-1/transcript.json",
+			phrasesRelativePath: "explanations/video-1/phrases.json",
 			failureReason: null,
 		});
-		expect(processingHistory.recordStepStart).toHaveBeenCalledTimes(3);
+		expect(processingHistory.recordStepStart).toHaveBeenCalledTimes(4);
 		expect(processingHistory.markCompleted).toHaveBeenCalledWith("video-1");
 	});
 
 	it("skips steps whose outputs already exist", async () => {
 		existingFiles.add("audio/video-1/track.mp3");
 		existingFiles.add("transcripts/video-1/transcript.json");
+		existingFiles.add("explanations/video-1/phrases.json");
 
 		await service.processNextPendingVideo();
 
@@ -150,10 +150,11 @@ describe("JobsService", () => {
 		]);
 		expect(ffmpegAudioService.extractAudio).not.toHaveBeenCalled();
 		expect(transcriptionService.transcribe).not.toHaveBeenCalled();
-		expect(processingHistory.recordStepComplete).toHaveBeenCalledWith(
-			"video-1",
-			"audio_extract",
-			"skipped (already present)",
-		);
+		expect(phraseDetectionService.detectPhrases).not.toHaveBeenCalled();
+		expect(processingHistory.recordStepComplete).toHaveBeenCalledWith({
+			videoId: "video-1",
+			step: "audio_extract",
+			message: "skipped (already present)",
+		});
 	});
 });

@@ -12,6 +12,7 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Response } from "express";
 import { memoryStorage } from "multer";
+import { parseLanguageLevel } from "./parse-language-level";
 import { VideosService } from "./videos.service";
 
 @Controller("videos")
@@ -49,6 +50,9 @@ export class VideosController {
 	async upload(
 		@UploadedFile() file: Express.Multer.File | undefined,
 		@Body("title") title: string | undefined,
+		@Body("sourceLanguage") sourceLanguage: string | undefined,
+		@Body("explanationLanguage") explanationLanguage: string | undefined,
+		@Body("languageLevel") languageLevel: string | undefined,
 		@Res() res: Response,
 	) {
 		try {
@@ -58,6 +62,24 @@ export class VideosController {
 
 			if (!file) {
 				return res.status(400).send("Video file is required");
+			}
+
+			if (typeof sourceLanguage !== "string" || !sourceLanguage.trim()) {
+				return res.status(400).send("Source language is required");
+			}
+
+			if (
+				typeof explanationLanguage !== "string" ||
+				!explanationLanguage.trim()
+			) {
+				return res.status(400).send("Explanation language is required");
+			}
+
+			const parsedLevel = parseLanguageLevel(languageLevel);
+			if (!parsedLevel) {
+				return res
+					.status(400)
+					.send("Language level is required (A1, A2, B1, B2, C1, or C2)");
 			}
 
 			const originalName = file.originalname || "upload.mp4";
@@ -74,6 +96,9 @@ export class VideosController {
 				mimeType: file.mimetype || "application/octet-stream",
 				sizeBytes: file.size,
 				fileBuffer: file.buffer,
+				sourceLanguage: sourceLanguage.trim(),
+				explanationLanguage: explanationLanguage.trim(),
+				languageLevel: parsedLevel,
 			});
 
 			return res.status(200).json({
@@ -81,6 +106,9 @@ export class VideosController {
 				title: record.title,
 				status: record.status,
 				sizeBytes: record.sizeBytes,
+				sourceLanguage: record.sourceLanguage,
+				explanationLanguage: record.explanationLanguage,
+				languageLevel: record.languageLevel,
 			});
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Upload failed";

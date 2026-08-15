@@ -77,11 +77,12 @@ export class ProcessingHistoryService {
 		});
 	}
 
-	async recordStepComplete(
-		videoId: string,
-		step: ProcessingStep,
-		message?: string,
-	): Promise<VideoProcessingHistory> {
+	async recordStepComplete(input: {
+		videoId: string;
+		step: ProcessingStep;
+		message?: string;
+	}): Promise<VideoProcessingHistory> {
+		const { videoId, step, message } = input;
 		const history = await this.getHistory(videoId);
 		const now = new Date().toISOString();
 		const event: ProcessingHistoryEvent = {
@@ -97,11 +98,12 @@ export class ProcessingHistoryService {
 		});
 	}
 
-	async recordFailure(
-		videoId: string,
-		step: ProcessingStep,
-		message: string,
-	): Promise<VideoProcessingHistory> {
+	async recordFailure(input: {
+		videoId: string;
+		step: ProcessingStep;
+		message: string;
+	}): Promise<VideoProcessingHistory> {
+		const { videoId, step, message } = input;
 		const history = await this.getHistory(videoId);
 		const now = new Date().toISOString();
 		const event: ProcessingHistoryEvent = {

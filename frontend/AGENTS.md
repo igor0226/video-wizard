@@ -1,5 +1,7 @@
 # Frontend Agent Notes
 
+Make sure to read the AGENTS.md file in the parent direction.
+
 ## Architecture
 
 Next.js 14 App Router under `app/`:

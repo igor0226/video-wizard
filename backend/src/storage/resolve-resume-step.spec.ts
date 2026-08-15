@@ -29,14 +29,14 @@ describe("resolveResumeStep", () => {
 				message: "Whisper failed",
 			},
 			{
-				step: "dash_encoding",
+				step: "detecting_phrases",
 				status: "failed",
 				at: "2026-01-01T00:00:03.000Z",
-				message: "later failure",
+				message: "phrase detection failed",
 			},
 		]);
 
-		expect(resolveResumeStep(history)).toBe("dash_encoding");
+		expect(resolveResumeStep(history)).toBe("detecting_phrases");
 	});
 
 	it("defaults to audio_extract when history has no failed resumable step", () => {
