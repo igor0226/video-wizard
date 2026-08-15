@@ -39,7 +39,8 @@ Your task is to analyze a transcript and identify phrases that would be challeng
 - Grammatically difficult constructions
 - Words or phrases whose meaning is hard to guess from surrounding context
 
-Skip items that are obvious or easy for the learner's level. For each flagged phrase, write a brief explanation in the requested explanation language that helps the learner understand meaning and usage.
+Skip items that are obvious or not hard for the learner's level. For each flagged phrase, write a brief explanation in the requested explanation language that helps the learner understand meaning and usage.
+Make sure that the explanations are not too frequent, otherwise the learner will get bored.
 
 Return word indexes (0-based, inclusive) that refer to the numbered word list provided. Only include phrases that appear in the transcript.`;
 

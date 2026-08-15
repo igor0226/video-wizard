@@ -1,9 +1,12 @@
 export type VideoStatus = "pending" | "processing" | "ready" | "failed";
 
+export type LanguageLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+
 export type ProcessingStep =
 	| "queued"
 	| "audio_extract"
 	| "transcribing"
+	| "detecting_phrases"
 	| "dash_encoding"
 	| "completed"
 	| "failed";
@@ -30,6 +33,9 @@ export type VideoItem = {
 	dashManifestUrl: string | null;
 	processingStep: ProcessingStep;
 	queuePosition: number | null;
+	sourceLanguage: string;
+	explanationLanguage: string;
+	languageLevel: LanguageLevel;
 };
 
 export type VideosResponse = {
@@ -45,6 +51,9 @@ export type VideoStatusResponse = {
 	processingStep: ProcessingStep;
 	queuePosition: number | null;
 	processingHistory: ProcessingHistoryEvent[];
+	sourceLanguage: string;
+	explanationLanguage: string;
+	languageLevel: LanguageLevel;
 };
 
 export type VideoRetryResponse = {

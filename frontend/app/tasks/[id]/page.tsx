@@ -81,6 +81,9 @@ export default function TaskDetailPage() {
 								failureReason: status.failureReason,
 								processingStep: status.processingStep,
 								queuePosition: status.queuePosition,
+								sourceLanguage: status.sourceLanguage,
+								explanationLanguage: status.explanationLanguage,
+								languageLevel: status.languageLevel,
 							}
 						: video,
 				),
@@ -101,6 +104,18 @@ export default function TaskDetailPage() {
 		statusData?.queuePosition ?? selectedVideo?.queuePosition ?? null;
 	const failureReason =
 		statusData?.failureReason ?? selectedVideo?.failureReason ?? null;
+	const sourceLanguage =
+		statusData?.sourceLanguage ?? selectedVideo?.sourceLanguage ?? null;
+	const explanationLanguage =
+		statusData?.explanationLanguage ??
+		selectedVideo?.explanationLanguage ??
+		null;
+	const languageLevel =
+		statusData?.languageLevel ?? selectedVideo?.languageLevel ?? null;
+	const languageSummary =
+		sourceLanguage && explanationLanguage && languageLevel
+			? `${sourceLanguage} · explained in ${explanationLanguage} · ${languageLevel}`
+			: null;
 
 	return (
 		<main className="tasksPage">
@@ -113,6 +128,10 @@ export default function TaskDetailPage() {
 			/>
 
 			<section className="tasksDetailContent">
+				{languageSummary ? (
+					<p className="tasksDetailMeta">{languageSummary}</p>
+				) : null}
+
 				<PlayerPanel selectedVideo={selectedVideo} />
 
 				<ProcessingHistoryPanel
