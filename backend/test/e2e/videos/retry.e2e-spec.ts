@@ -54,7 +54,6 @@ describe("Videos retry (e2e)", () => {
 			id: videoId,
 			status: "pending",
 			resumeFromStep: "transcribing",
-			processingStep: "transcribing",
 			failureReason: null,
 		});
 
