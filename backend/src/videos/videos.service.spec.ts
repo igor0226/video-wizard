@@ -66,7 +66,6 @@ describe("VideosService", () => {
 			id: "video-1",
 			status: "pending",
 			resumeFromStep: "transcribing",
-			processingStep: "transcribing",
 			failureReason: null,
 		});
 		expect(blobStorage.clearProcessingArtifactsFromStep).toHaveBeenCalledWith(
