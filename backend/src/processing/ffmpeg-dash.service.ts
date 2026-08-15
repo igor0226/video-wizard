@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -6,29 +5,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 
 import { BlobStorageService, type VideoRecord } from "../storage";
-
-function runProcess(command: string, args: string[]): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const child = spawn(command, args, { stdio: ["ignore", "ignore", "pipe"] });
-		let stderr = "";
-
-		child.stderr.on("data", (chunk) => {
-			stderr += chunk.toString("utf8");
-		});
-
-		child.on("error", (error) => {
-			reject(error);
-		});
-
-		child.on("close", (exitCode) => {
-			if (exitCode === 0) {
-				resolve();
-				return;
-			}
-			reject(new Error(stderr || `Process exited with code ${exitCode}`));
-		});
-	});
-}
+import { normalizeFfmpegError, runProcess } from "./ffmpeg-process";
 
 @Injectable()
 export class FfmpegDashService {
@@ -88,12 +65,7 @@ export class FfmpegDashService {
 			);
 			await runProcess("ffmpeg", args);
 		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : "Unknown ffmpeg failure";
-			if (/ENOENT|not found/i.test(message)) {
-				throw new Error("FFmpeg is not installed or not available in PATH");
-			}
-			throw new Error(`FFmpeg failed: ${message}`);
+			throw normalizeFfmpegError(error);
 		}
 
 		const files = await readdir(dashAbsolutePath, { withFileTypes: true });

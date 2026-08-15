@@ -5,9 +5,13 @@ import { DashModule } from "./dash/dash.module";
 import { ProcessingModule } from "./processing/processing.module";
 import { StorageModule } from "./storage";
 import { VideosModule } from "./videos/videos.module";
+import { ConfigModule } from "@nestjs/config";
 
 @Module({
 	imports: [
+		ConfigModule.forRoot({
+			isGlobal: true,
+		}),
 		LoggerModule.forRoot({
 			pinoHttp: {
 				level:

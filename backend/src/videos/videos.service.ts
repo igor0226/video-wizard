@@ -1,10 +1,20 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+	ConflictException,
+	Injectable,
+	NotFoundException,
+} from "@nestjs/common";
 
 import {
+	BlobStorageService,
+	ProcessingHistoryService,
+	resolveResumeStep,
+	type ProcessingHistoryEvent,
+	type ProcessingStep,
 	VideoRepositoryService,
 	type CreateVideoInput,
 	type VideoRecord,
 } from "../storage";
+import { getQueuePosition } from "./queue-position";
 
 export type VideoListItem = {
 	id: string;
@@ -16,15 +26,43 @@ export type VideoListItem = {
 	createdAt: string;
 	updatedAt: string;
 	failureReason: string | null;
+	processingStep: ProcessingStep;
+	queuePosition: number | null;
+};
+
+export type VideoStatusForApi = {
+	id: string;
+	status: "pending" | "processing" | "ready" | "failed";
+	failureReason: string | null;
+	playable: boolean;
+	chunkCount: number;
+	processingStep: ProcessingStep;
+	queuePosition: number | null;
+	processingHistory: ProcessingHistoryEvent[];
+};
+
+export type VideoRetryForApi = {
+	id: string;
+	status: "pending";
+	resumeFromStep: ProcessingStep;
+	failureReason: null;
 };
 
 @Injectable()
 export class VideosService {
-	constructor(private readonly videoRepository: VideoRepositoryService) {}
+	constructor(
+		private readonly videoRepository: VideoRepositoryService,
+		private readonly processingHistory: ProcessingHistoryService,
+		private readonly blobStorage: BlobStorageService,
+	) {}
 
 	async listVideosForApi(): Promise<VideoListItem[]> {
 		const videos = await this.videoRepository.listVideos();
-		return videos.map((video) => ({
+		const histories = await Promise.all(
+			videos.map((video) => this.processingHistory.getHistory(video.id)),
+		);
+
+		return videos.map((video, index) => ({
 			id: video.id,
 			title: video.title,
 			status: video.status,
@@ -34,7 +72,26 @@ export class VideosService {
 			createdAt: video.createdAt,
 			updatedAt: video.updatedAt,
 			failureReason: video.failureReason,
+			processingStep: histories[index].currentStep,
+			queuePosition: getQueuePosition(video, videos),
 		}));
+	}
+
+	async getVideoStatusForApi(videoId: string): Promise<VideoStatusForApi> {
+		const video = await this.getVideoRecordById(videoId);
+		const allVideos = await this.videoRepository.listVideos();
+		const history = await this.processingHistory.getHistory(videoId);
+
+		return {
+			id: video.id,
+			status: video.status,
+			failureReason: video.failureReason,
+			playable: video.status === "ready",
+			chunkCount: video.segmentCount,
+			processingStep: history.currentStep,
+			queuePosition: getQueuePosition(video, allVideos),
+			processingHistory: history.events,
+		};
 	}
 
 	async getVideoRecordById(videoId: string): Promise<VideoRecord> {
@@ -47,5 +104,32 @@ export class VideosService {
 
 	async createVideo(input: CreateVideoInput): Promise<VideoRecord> {
 		return this.videoRepository.createVideo(input);
+	}
+
+	async retryFailedVideo(videoId: string): Promise<VideoRetryForApi> {
+		const video = await this.getVideoRecordById(videoId);
+		if (video.status !== "failed") {
+			throw new ConflictException("Only failed videos can be retried");
+		}
+
+		const history = await this.processingHistory.getHistory(videoId);
+		const resumeFromStep = resolveResumeStep(history);
+
+		await this.blobStorage.clearProcessingArtifactsFromStep(
+			videoId,
+			resumeFromStep,
+		);
+		await this.processingHistory.recordRetry(videoId, resumeFromStep);
+		await this.videoRepository.updateVideo(videoId, {
+			status: "pending",
+			failureReason: null,
+		});
+
+		return {
+			id: videoId,
+			status: "pending",
+			resumeFromStep,
+			failureReason: null,
+		};
 	}
 }

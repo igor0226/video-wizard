@@ -44,3 +44,15 @@ export function formatCreatedAt(iso: string): string {
 		year: "numeric",
 	});
 }
+
+export function formatEventAt(iso: string): string {
+	const date = new Date(iso);
+	return date.toLocaleString("en-GB", {
+		day: "numeric",
+		month: "short",
+		year: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+	});
+}

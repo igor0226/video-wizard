@@ -2,6 +2,7 @@ import {
 	Body,
 	Controller,
 	Get,
+	HttpCode,
 	Param,
 	Post,
 	Res,
@@ -29,14 +30,13 @@ export class VideosController {
 
 	@Get(":id/status")
 	async getStatus(@Param("id") id: string) {
-		const video = await this.videosService.getVideoRecordById(id);
-		return {
-			id: video.id,
-			status: video.status,
-			failureReason: video.failureReason,
-			playable: video.status === "ready",
-			chunkCount: video.segmentCount,
-		};
+		return this.videosService.getVideoStatusForApi(id);
+	}
+
+	@Post(":id/retry")
+	@HttpCode(200)
+	async retryVideo(@Param("id") id: string) {
+		return this.videosService.retryFailedVideo(id);
 	}
 
 	@Post("upload")

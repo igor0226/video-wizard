@@ -11,7 +11,11 @@ import {
 import { useRouter } from "next/navigation";
 
 import { formatCreatedAt, formatTaskId } from "../../lib/format";
-import { getTaskStatusLabel, TaskStatusIcon } from "../../lib/task-status";
+import {
+	getProcessingStepLabel,
+	getTaskStatusLabel,
+	TaskStatusIcon,
+} from "../../lib/task-status";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
@@ -160,7 +164,18 @@ export function TasksTable({
 												status={video.status}
 												className="h-4 w-4"
 											/>
-											<span>{getTaskStatusLabel(video.status)}</span>
+											<div className="tasksStatusText">
+												<span>{getTaskStatusLabel(video.status)}</span>
+												{video.status === "pending" ||
+												video.status === "processing" ? (
+													<span className="tasksStatusDetail">
+														{getProcessingStepLabel(video.processingStep)}
+														{video.queuePosition != null
+															? ` · Queue #${video.queuePosition}`
+															: null}
+													</span>
+												) : null}
+											</div>
 										</div>
 									</TableCell>
 									<TableCell

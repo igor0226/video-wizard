@@ -5,6 +5,7 @@ import path from "node:path";
 import { Injectable } from "@nestjs/common";
 
 import { BlobStorageService } from "./blob-storage.service";
+import { ProcessingHistoryService } from "./processing-history.service";
 import type { CreateVideoInput, VideoRecord } from "./types";
 
 const UPLOADS_DIR = "uploads";
@@ -34,7 +35,11 @@ function toRecordFileName(videoId: string): string {
 
 async function readRecordFile(recordPath: string): Promise<VideoRecord> {
 	const content = await readFile(recordPath, "utf8");
-	return JSON.parse(content) as VideoRecord;
+	const parsed = JSON.parse(content) as Partial<VideoRecord>;
+	return {
+		...parsed,
+		transcriptRelativePath: parsed.transcriptRelativePath ?? null,
+	} as VideoRecord;
 }
 
 async function isDirectory(absolutePath: string): Promise<boolean> {
@@ -48,7 +53,10 @@ async function isDirectory(absolutePath: string): Promise<boolean> {
 
 @Injectable()
 export class VideoRepositoryService {
-	constructor(private readonly blobStorage: BlobStorageService) {}
+	constructor(
+		private readonly blobStorage: BlobStorageService,
+		private readonly processingHistory: ProcessingHistoryService,
+	) {}
 
 	async createVideo(input: CreateVideoInput): Promise<VideoRecord> {
 		await this.blobStorage.ensureLayout();
@@ -77,6 +85,7 @@ export class VideoRepositoryService {
 			createdAt: nowIso,
 			updatedAt: nowIso,
 			failureReason: null,
+			transcriptRelativePath: null,
 		};
 
 		await this.blobStorage.writeUploadFile(
@@ -87,6 +96,7 @@ export class VideoRepositoryService {
 			path.posix.join(RECORDS_DIR, toRecordFileName(videoId)),
 		);
 		await writeFile(recordPath, JSON.stringify(record, null, 2), "utf8");
+		await this.processingHistory.initHistory(videoId);
 		return record;
 	}
 

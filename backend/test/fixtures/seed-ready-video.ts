@@ -42,6 +42,7 @@ export async function seedReadyVideo(
 		createdAt: nowIso,
 		updatedAt: nowIso,
 		failureReason: null,
+		transcriptRelativePath: null,
 	};
 
 	const manifestContent = [
@@ -78,6 +79,22 @@ export async function seedReadyVideo(
 	await writeFile(
 		path.join(storageRoot, sourceRelativePath),
 		Buffer.from("mock-upload-bytes"),
+	);
+
+	const history = {
+		videoId,
+		currentStep: "completed",
+		events: [
+			{ step: "queued", status: "started", at: nowIso },
+			{ step: "completed", status: "completed", at: nowIso },
+		],
+		updatedAt: nowIso,
+	};
+	await mkdir(path.join(storageRoot, "history"), { recursive: true });
+	await writeFile(
+		path.join(storageRoot, "history", `${videoId}.json`),
+		JSON.stringify(history, null, 2),
+		"utf8",
 	);
 
 	return { videoId, segmentFileName, title };

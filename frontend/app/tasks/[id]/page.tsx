@@ -8,6 +8,8 @@ import { useEffect, useMemo } from "react";
 
 import { AppPageHeader } from "../../components/AppPageHeader/AppPageHeader";
 import { PlayerPanel } from "../../components/PlayerPanel/PlayerPanel";
+import { ProcessingHistoryPanel } from "../../components/ProcessingHistoryPanel/ProcessingHistoryPanel";
+import { useRetryVideo } from "../../hooks/useRetryVideo";
 import { apiUrl } from "../../lib/api";
 
 import "../../styles/tasks-page.css";
@@ -28,10 +30,15 @@ async function fetchVideoStatus(videoId: string): Promise<VideoStatusResponse> {
 	return response.json() as Promise<VideoStatusResponse>;
 }
 
+function isTerminalStatus(status: string | undefined): boolean {
+	return status === "ready" || status === "failed";
+}
+
 export default function TaskDetailPage() {
 	const params = useParams<{ id: string }>();
 	const videoId = params.id;
 	const queryClient = useQueryClient();
+	const { retryVideo, isRetrying } = useRetryVideo(videoId);
 
 	const videosQuery = useQuery({
 		queryKey: ["videos"],
@@ -48,12 +55,9 @@ export default function TaskDetailPage() {
 	const statusQuery = useQuery({
 		queryKey: ["video-status", videoId],
 		queryFn: () => fetchVideoStatus(videoId),
-		enabled: Boolean(
-			selectedVideo &&
-				selectedVideo.status !== "ready" &&
-				selectedVideo.status !== "failed",
-		),
-		refetchInterval: 3000,
+		enabled: Boolean(videoId),
+		refetchInterval: (query) =>
+			isTerminalStatus(query.state.data?.status) ? false : 3000,
 	});
 
 	useEffect(() => {
@@ -75,6 +79,8 @@ export default function TaskDetailPage() {
 								playable: status.playable,
 								chunkCount: status.chunkCount,
 								failureReason: status.failureReason,
+								processingStep: status.processingStep,
+								queuePosition: status.queuePosition,
 							}
 						: video,
 				),
@@ -82,7 +88,19 @@ export default function TaskDetailPage() {
 		});
 	}, [queryClient, videoId, statusQuery.data]);
 
-	const pageError = (videosQuery.error as Error | null)?.message ?? null;
+	const pageError =
+		(videosQuery.error as Error | null)?.message ??
+		(statusQuery.error as Error | null)?.message ??
+		null;
+
+	const statusData = statusQuery.data;
+	const historyEvents = statusData?.processingHistory ?? null;
+	const currentStep =
+		statusData?.processingStep ?? selectedVideo?.processingStep ?? null;
+	const queuePosition =
+		statusData?.queuePosition ?? selectedVideo?.queuePosition ?? null;
+	const failureReason =
+		statusData?.failureReason ?? selectedVideo?.failureReason ?? null;
 
 	return (
 		<main className="tasksPage">
@@ -96,6 +114,17 @@ export default function TaskDetailPage() {
 
 			<section className="tasksDetailContent">
 				<PlayerPanel selectedVideo={selectedVideo} />
+
+				<ProcessingHistoryPanel
+					events={historyEvents}
+					currentStep={currentStep}
+					queuePosition={queuePosition}
+					failureReason={failureReason}
+					isLoading={statusQuery.isLoading}
+					canRetry={statusData?.status === "failed"}
+					onRetry={() => retryVideo()}
+					isRetrying={isRetrying}
+				/>
 
 				{pageError ? <p className="tasksPageError">{pageError}</p> : null}
 			</section>

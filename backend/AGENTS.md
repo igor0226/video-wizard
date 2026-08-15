@@ -5,7 +5,7 @@
 Nest.js app under `src/` with feature modules:
 
 - `videos/` — list/upload/status HTTP API
-- `processing/` — cron worker, jobs, FFmpeg DASH generation
+- `processing/` — cron worker, jobs, FFmpeg DASH generation, audio extraction, Whisper transcription
 - `dash/` — manifest rewrite + segment serving
 - `storage/` — filesystem storage + video record repository
 
@@ -28,8 +28,42 @@ Nest.js app under `src/` with feature modules:
 
 - `videos/uploads/<videoId>/<source-file>`
 - `videos/dash/<videoId>/manifest.mpd` + segments
+- `videos/audio/<videoId>/track.mp3` — extracted mono MP3 for transcription
+- `videos/transcripts/<videoId>/transcript.json` — Whisper verbose JSON (word timestamps)
 - `videos/records/<videoId>.json`
+- `videos/history/<videoId>.json` — processing step history (events + current step)
 - `videos/locks/<videoId>.lock` (worker concurrency guard)
+
+### Processing pipeline
+
+Worker order for each pending video: **audio extract → Whisper transcribe → DASH transcode → ready**.
+
+- `FfmpegAudioService` — extracts mono 16 kHz MP3 (`audio/<videoId>/track.mp3`); fails if no audio track
+- `WhisperTranscriptionService` — OpenAI `whisper-1` with `verbose_json` + word timestamps; writes `transcripts/<videoId>/transcript.json`
+- `FfmpegDashService` — DASH packaging
+- Files > 24 MB are split into ~10-minute chunks before transcription and merged with offset word timestamps
+- `OPENAI_API_KEY` is required when the worker runs transcription
+- Any step failure marks the video `failed` and records the failing step in history
+- Completed steps are skipped on resume when their output files already exist
+
+Processing steps tracked in history: `queued`, `audio_extract`, `transcribing`, `dash_encoding`, `completed`, `failed`.
+
+### Video API processing fields
+
+- `GET /api/videos` — each item includes `processingStep` and `queuePosition` (`null` unless `status === "pending"`)
+- `GET /api/videos/:id/status` — adds `processingHistory` (full event log) plus `processingStep` and `queuePosition`
+- `POST /api/videos/:id/retry` — retry a **failed** video; returns `409` for non-failed videos, `404` if missing
+- `queuePosition` is computed at read time: 1-based index among pending videos sorted by `createdAt`
+
+### Retry failed videos
+
+`POST /api/videos/:id/retry`:
+
+1. Validates `status === "failed"`
+2. Reads the last failed resumable step from `videos/history/<videoId>.json` (`audio_extract`, `transcribing`, or `dash_encoding`)
+3. Clears artifacts for that step and any downstream steps (keeps upstream outputs so the worker skips completed work)
+4. Appends a history event (`message: "retry requested"`) and sets `currentStep` to the resume step
+5. Sets video record back to `pending` with `failureReason: null` — the cron worker picks it up on the next tick
 
 ### DASH
 

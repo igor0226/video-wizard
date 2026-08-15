@@ -42,6 +42,8 @@ Assets live under repo-root `videos/` by default:
 
 - `uploads/<videoId>/` — source files
 - `dash/<videoId>/` — `manifest.mpd` + segments
+- `audio/<videoId>/` — extracted MP3 for transcription
+- `transcripts/<videoId>/` — Whisper transcript JSON
 - `records/<videoId>.json` — video records
 - `locks/<videoId>.lock` — worker concurrency locks
 
