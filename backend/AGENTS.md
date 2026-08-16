@@ -2,6 +2,8 @@
 
 Make sure to read the AGENTS.md file in the parent direction.
 
+Run the app with Docker Compose from the repo root (`docker compose up --build`); see the parent [`AGENTS.md`](../AGENTS.md). FFmpeg is in the backend image when using Compose.
+
 ## Architecture
 
 Nest.js app under `src/` with feature modules:
@@ -16,6 +18,7 @@ Nest.js app under `src/` with feature modules:
 ## Tech stack
 
 - Nest.js + TypeScript
+- SWC for Nest emit (`nest build` / `nest start`); `tsc --noEmit` for type checking (`npm run typecheck`, and forked in parallel on `start:dev`)
 - Pino via `nestjs-pino` (pretty in non-production)
 - Local disk storage (no DB/S3 yet)
 - FFmpeg for DASH generation

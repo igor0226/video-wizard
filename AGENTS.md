@@ -21,7 +21,8 @@ A user uploads a video and selects the video language and explanation language. 
 - `frontend/` — Next.js UI (own `package.json`)
 - `backend/` — Nest.js API + processing worker (own `package.json`)
 - `videos/` — local filesystem storage (repo root)
-- Root `package.json` — husky/commitlint only
+- `compose.yaml` — Docker Compose dev stack (frontend + backend, hot reload)
+- Root `package.json` — husky/commitlint and `npm run dev` (`docker compose up`)
 
 ### Artifacts
 
@@ -54,12 +55,13 @@ The browser calls Nest directly (no Next.js API proxy).
 - npm as package manager (separate installs in `frontend/` and `backend/`)
 - Frontend: Next.js under `frontend/`
 - Backend: Nest.js under `backend/`
+- Local dev: Docker Compose (`compose.yaml`)
 
 ## Key technical details
 
 - **Hard rule:** ask questions if something from the user's instruction seems not clear enough.
-- **Hard rule:** always run `nvm use` before Node commands.
-- FFmpeg must be available on system `PATH` for DASH packaging and video compositing (burn-in subtitles, phrase highlights, splice explanation clips at sentence boundaries derived from transcript timestamps).
+- **Hard rule:** always run `nvm use` before host Node commands (lint, test, commit hooks).
+- FFmpeg is provided by the backend Docker image when using Compose. On the host (without Docker), FFmpeg must be on system `PATH` for DASH packaging and video compositing (burn-in subtitles, phrase highlights, splice explanation clips at sentence boundaries derived from transcript timestamps).
 - **Transcription:** Whisper (or equivalent) for speech-to-text with timed word/segment output.
 - **Phrase analysis + explanations:** LLM (e.g. OpenAI) to flag idioms, collocations, and grammatically tricky phrases and generate learner explanations in the explanation language.
 - **TTS:** explanation text is spoken via TTS (provider TBD); locale follows the explanation language.
@@ -70,12 +72,11 @@ The browser calls Nest directly (no Next.js API proxy).
   - `CORS_ORIGIN` (Nest → Next origin)
 - Keep files under 300 lines. If not possible, ask.
 
-### Local dev (two terminals)
+### Local dev (Docker Compose)
 
 ```bash
-nvm use
-cd backend && npm install && npm run start:dev   # :3001
-cd frontend && npm install && npm run dev        # :3000
+cp backend/.env.example backend/.env   # then set OPENAI_API_KEY
+docker compose up --build              # frontend :3000, backend :3001
 ```
 
-Package validation steps live in [`frontend/AGENTS.md`](frontend/AGENTS.md) and [`backend/AGENTS.md`](backend/AGENTS.md).
+Host Node (lint/test/hooks) still uses `nvm use`. Package validation steps live in [`frontend/AGENTS.md`](frontend/AGENTS.md) and [`backend/AGENTS.md`](backend/AGENTS.md).

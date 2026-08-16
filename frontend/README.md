@@ -6,13 +6,21 @@ The browser talks to the Nest backend directly (`NEXT_PUBLIC_API_URL`).
 
 ## Prerequisites
 
-- Node.js v24 (see repo-root `.nvmrc`)
-- npm
-- Backend running on `http://localhost:3001` (see [`../backend/README.md`](../backend/README.md))
+Preferred: Docker Compose from the repo root (see [`../README.md`](../README.md)).
+
+Without Docker: Node.js v24 (see repo-root `.nvmrc`) and the backend running on `http://localhost:3001`.
 
 ## Startup
 
 From the repository root:
+
+```bash
+npm run dev
+```
+
+App: [http://localhost:3000](http://localhost:3000)
+
+Without Docker:
 
 ```bash
 nvm use
@@ -21,11 +29,9 @@ npm install
 npm run dev
 ```
 
-App: [http://localhost:3000](http://localhost:3000)
-
 ### Environment (optional)
 
-Create `frontend/.env.local` if you need a non-default API URL:
+Compose sets `NEXT_PUBLIC_API_URL=http://localhost:3001`. Create `frontend/.env.local` only if you need a non-default API URL on the host:
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:3001

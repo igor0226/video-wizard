@@ -4,7 +4,7 @@
 	"description": "Next.js frontend for local video streaming",
 	"private": true,
 	"scripts": {
-		"dev": "WATCHPACK_POLLING=true next dev",
+		"dev": "WATCHPACK_POLLING=true next dev --hostname 0.0.0.0",
 		"build": "next build",
 		"start": "next start",
 		"typecheck": "tsc --noEmit",

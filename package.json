@@ -4,7 +4,9 @@
 	"private": true,
 	"description": "Local video streaming monorepo (Next frontend + Nest backend)",
 	"scripts": {
-		"prepare": "husky"
+		"prepare": "husky",
+		"dev": "docker compose up",
+		"dev:rebuild": "docker compose up --build"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^21.2.1",

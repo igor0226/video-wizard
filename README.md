@@ -30,6 +30,7 @@ It is designed for local development and feature iteration (no cloud storage or 
 - **Logging (backend):** Pino via `nestjs-pino` (pretty-print in development)
 - **Background Scheduling:** `cron` npm package (Nest worker loop)
 - **Storage:** Local filesystem under repo-root `videos/`
+- **Local dev:** Docker Compose (`compose.yaml`)
 
 ## Work Schema (Processing Flow)
 
@@ -72,33 +73,50 @@ All runtime assets are stored on disk at the repo root:
 
 ## Prerequisites
 
-- Node.js v24 (see `.nvmrc`)
-- npm
-- FFmpeg available in your system `PATH`
+- Docker with Compose v2 (Docker Desktop or equivalent)
+- Copy `backend/.env.example` to `backend/.env` and set `OPENAI_API_KEY` (needed for Whisper transcription and phrase detection)
 
-Check FFmpeg:
+FFmpeg is installed in the backend image; you do not need it on the host when using Compose.
+
+## Local development (Docker Compose)
+
+From the repository root:
 
 ```bash
-ffmpeg -version
+cp backend/.env.example backend/.env   # then set OPENAI_API_KEY
+docker compose up --build
 ```
 
-## Required Commands
+Or `npm run dev` from the repo root (same as `docker compose up`).
 
-Use the project Node version:
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Backend: [http://localhost:3001](http://localhost:3001) (global prefix `/api`)
+
+Source is bind-mounted, so frontend and backend hot-reload on file changes.
+
+After `package.json` or lockfile changes, rebuild (`docker compose up --build`). To reset container `node_modules` / build caches, run `docker compose down -v` (the bind-mounted `videos/` directory is not removed).
+
+Compose sets `NEXT_PUBLIC_API_URL=http://localhost:3001` and `CORS_ORIGIN=http://localhost:3000` so the browser can call Nest on the host-published ports.
+
+## Without Docker
+
+Use the project Node version, and install FFmpeg on your `PATH`:
 
 ```bash
 nvm use
+ffmpeg -version
 ```
 
-Install and run **backend** (terminal 1):
+Terminal 1 (backend):
 
 ```bash
 cd backend
 npm install
+cp .env.example .env   # then set OPENAI_API_KEY
 npm run start:dev
 ```
 
-Install and run **frontend** (terminal 2):
+Terminal 2 (frontend):
 
 ```bash
 cd frontend
@@ -122,6 +140,8 @@ VIDEO_PROCESSOR_CRON="*/15 * * * * *"
 STORAGE_ROOT=/absolute/path/to/videos
 ```
 
+## Other commands
+
 Create production builds:
 
 ```bash
@@ -129,7 +149,7 @@ cd backend && npm run build && npm run start:prod
 cd frontend && npm run build && npm run start
 ```
 
-Format, typecheck, and lint:
+Format, typecheck, and lint (host Node; run `nvm use` first):
 
 ```bash
 cd frontend && npm run lint:fix && npm run typecheck && npm run lint

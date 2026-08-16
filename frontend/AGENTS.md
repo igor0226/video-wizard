@@ -2,6 +2,8 @@
 
 Make sure to read the AGENTS.md file in the parent direction.
 
+Run the app with Docker Compose from the repo root (`docker compose up --build`); see the parent [`AGENTS.md`](../AGENTS.md).
+
 ## Architecture
 
 Next.js 14 App Router under `app/`:
