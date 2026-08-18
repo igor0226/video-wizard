@@ -4,29 +4,30 @@ Nest.js API and background worker for the local video streaming app. Handles upl
 
 ## Prerequisites
 
-- Node.js v24 (see repo-root `.nvmrc`)
-- npm
-- FFmpeg available on system `PATH`
+Preferred: Docker Compose from the repo root (see [`../README.md`](../README.md)). The backend image includes FFmpeg.
 
-Check FFmpeg:
-
-```bash
-ffmpeg -version
-```
+Without Docker: Node.js v24 (see repo-root `.nvmrc`), npm, and FFmpeg on system `PATH`.
 
 ## Startup
 
 From the repository root:
 
 ```bash
-nvm use
-cd backend
-npm install
-cp .env.example .env   # optional; defaults work for local dev
-npm run start:dev
+cp backend/.env.example backend/.env   # then set OPENAI_API_KEY
+npm run dev
 ```
 
 API: [http://localhost:3001](http://localhost:3001) (global prefix `/api`)
+
+Without Docker:
+
+```bash
+nvm use
+cd backend
+npm install
+cp .env.example .env   # then set OPENAI_API_KEY
+npm run start:dev
+```
 
 ## Main endpoints
 
@@ -38,7 +39,7 @@ API: [http://localhost:3001](http://localhost:3001) (global prefix `/api`)
 
 ## Local storage
 
-Assets live under repo-root `videos/` by default:
+Assets live under repo-root `videos/` by default (Compose mounts this at `/videos` via `STORAGE_ROOT`):
 
 - `uploads/<videoId>/` — source files
 - `dash/<videoId>/` — `manifest.mpd` + segments

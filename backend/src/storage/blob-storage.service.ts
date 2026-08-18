@@ -18,6 +18,7 @@ const RECORDS_DIR = "records";
 const AUDIO_DIR = "audio";
 const TRANSCRIPTS_DIR = "transcripts";
 const EXPLANATIONS_DIR = "explanations";
+const ENRICHED_DIR = "enriched";
 const HISTORY_DIR = "history";
 
 async function ensureDir(dirPath: string): Promise<void> {
@@ -43,6 +44,7 @@ export class BlobStorageService {
 			ensureDir(path.join(storageRoot, AUDIO_DIR)),
 			ensureDir(path.join(storageRoot, TRANSCRIPTS_DIR)),
 			ensureDir(path.join(storageRoot, EXPLANATIONS_DIR)),
+			ensureDir(path.join(storageRoot, ENRICHED_DIR)),
 			ensureDir(path.join(storageRoot, HISTORY_DIR)),
 		]);
 	}
@@ -152,6 +154,22 @@ export class BlobStorageService {
 		return path.posix.join(EXPLANATIONS_DIR, videoId);
 	}
 
+	getClipsManifestRelativePath(videoId: string): string {
+		return path.posix.join(EXPLANATIONS_DIR, videoId, "clips.json");
+	}
+
+	getClipsDirectoryRelativePath(videoId: string): string {
+		return path.posix.join(EXPLANATIONS_DIR, videoId, "clips");
+	}
+
+	getEnrichedDirectoryRelativePath(videoId: string): string {
+		return path.posix.join(ENRICHED_DIR, videoId);
+	}
+
+	getEnrichedVideoRelativePath(videoId: string): string {
+		return path.posix.join(ENRICHED_DIR, videoId, "output.mp4");
+	}
+
 	getDashDirectoryRelativePath(videoId: string): string {
 		return path.posix.join(DASH_DIR, videoId);
 	}
@@ -161,36 +179,55 @@ export class BlobStorageService {
 		fromStep: ProcessingStep,
 	): Promise<void> {
 		const directories: string[] = [];
+		const files: string[] = [];
 
 		if (fromStep === "audio_extract") {
 			directories.push(
 				this.getAudioDirectoryRelativePath(videoId),
 				this.getTranscriptDirectoryRelativePath(videoId),
 				this.getExplanationsDirectoryRelativePath(videoId),
+				this.getEnrichedDirectoryRelativePath(videoId),
 				this.getDashDirectoryRelativePath(videoId),
 			);
 		} else if (fromStep === "transcribing") {
 			directories.push(
 				this.getTranscriptDirectoryRelativePath(videoId),
 				this.getExplanationsDirectoryRelativePath(videoId),
+				this.getEnrichedDirectoryRelativePath(videoId),
 				this.getDashDirectoryRelativePath(videoId),
 			);
 		} else if (fromStep === "detecting_phrases") {
 			directories.push(
 				this.getExplanationsDirectoryRelativePath(videoId),
+				this.getEnrichedDirectoryRelativePath(videoId),
+				this.getDashDirectoryRelativePath(videoId),
+			);
+		} else if (fromStep === "generating_clips") {
+			directories.push(
+				this.getClipsDirectoryRelativePath(videoId),
+				this.getEnrichedDirectoryRelativePath(videoId),
+				this.getDashDirectoryRelativePath(videoId),
+			);
+			files.push(this.getClipsManifestRelativePath(videoId));
+		} else if (fromStep === "composing_video") {
+			directories.push(
+				this.getEnrichedDirectoryRelativePath(videoId),
 				this.getDashDirectoryRelativePath(videoId),
 			);
 		} else if (fromStep === "dash_encoding") {
 			directories.push(this.getDashDirectoryRelativePath(videoId));
 		}
 
-		await Promise.all(
-			directories.map((relativePath) =>
+		await Promise.all([
+			...directories.map((relativePath) =>
 				rm(this.resolveRelativePath(relativePath), {
 					recursive: true,
 					force: true,
 				}),
 			),
-		);
+			...files.map((relativePath) =>
+				rm(this.resolveRelativePath(relativePath), { force: true }),
+			),
+		]);
 	}
 }

@@ -43,6 +43,8 @@ export type ProcessingStep =
 	| "audio_extract"
 	| "transcribing"
 	| "detecting_phrases"
+	| "generating_clips"
+	| "composing_video"
 	| "dash_encoding"
 	| "completed"
 	| "failed";

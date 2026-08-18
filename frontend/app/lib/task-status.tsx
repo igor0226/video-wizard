@@ -28,6 +28,10 @@ export function getProcessingStepLabel(step: ProcessingStep): string {
 			return "Transcribing";
 		case "detecting_phrases":
 			return "Detecting phrases";
+		case "generating_clips":
+			return "Generating explanation clips";
+		case "composing_video":
+			return "Composing video";
 		case "dash_encoding":
 			return "Encoding DASH";
 		case "completed":

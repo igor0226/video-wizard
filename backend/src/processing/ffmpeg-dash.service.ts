@@ -19,14 +19,20 @@ export class FfmpegDashService {
 		video: VideoRecord,
 	): Promise<{ segmentCount: number }> {
 		await this.blobStorage.ensureLayout();
-		const { sourceAbsolutePath, dashAbsolutePath, manifestAbsolutePath } =
-			this.blobStorage.getStoragePathsForVideo(video);
+		const enrichedRelativePath = this.blobStorage.getEnrichedVideoRelativePath(
+			video.id,
+		);
+		const enrichedAbsolutePath =
+			this.blobStorage.resolveRelativePath(enrichedRelativePath);
 		await this.blobStorage.ensureCleanDirectory(video.dashRelativePath);
+
+		const { dashAbsolutePath, manifestAbsolutePath } =
+			this.blobStorage.getStoragePathsForVideo(video);
 
 		const args = [
 			"-y",
 			"-i",
-			sourceAbsolutePath,
+			enrichedAbsolutePath,
 			"-map",
 			"0:v:0",
 			"-map",

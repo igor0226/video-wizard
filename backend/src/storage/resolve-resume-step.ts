@@ -4,6 +4,8 @@ const RESUMABLE_STEPS = [
 	"audio_extract",
 	"transcribing",
 	"detecting_phrases",
+	"generating_clips",
+	"composing_video",
 	"dash_encoding",
 ] as const satisfies readonly ProcessingStep[];
 

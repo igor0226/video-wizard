@@ -42,4 +42,28 @@ describe("mergeWhisperTranscripts", () => {
 			"Cannot merge empty transcript chunks",
 		);
 	});
+
+	it("merges segment timestamps with offsets", () => {
+		const first: WhisperTranscript = {
+			language: "english",
+			duration: 5,
+			text: "Hello world.",
+			words: [{ word: "Hello", start: 0, end: 0.4 }],
+			segments: [{ start: 0, end: 2.5, text: "Hello world." }],
+		};
+		const second: WhisperTranscript = {
+			language: "english",
+			duration: 4,
+			text: "Again.",
+			words: [{ word: "Again", start: 0.1, end: 0.5 }],
+			segments: [{ start: 0, end: 1.2, text: "Again." }],
+		};
+
+		const merged = mergeWhisperTranscripts([first, second], [0, 600]);
+
+		expect(merged.segments).toEqual([
+			{ start: 0, end: 2.5, text: "Hello world." },
+			{ start: 600, end: 601.2, text: "Again." },
+		]);
+	});
 });
