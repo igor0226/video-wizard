@@ -71,6 +71,7 @@ The browser calls Nest directly (no Next.js API proxy).
   - `NEXT_PUBLIC_API_URL` (frontend → Nest)
   - `CORS_ORIGIN` (Nest → Next origin)
 - Keep files under 300 lines. If not possible, ask.
+- Keep functions under 50 lines. If not possible, ask.
 
 ### Local dev (Docker Compose)
 

@@ -10,6 +10,7 @@ import { FfmpegAudioService } from "./ffmpeg-audio.service";
 import { FfmpegDashService } from "./ffmpeg-dash.service";
 import { JobsService } from "./jobs.service";
 import { PhraseDetectionService } from "./phrase-detection.service";
+import { ProcessingPipelineService } from "./processing-pipeline.service";
 import { WhisperTranscriptionService } from "./transcription.service";
 
 vi.mock("node:fs/promises", () => ({
@@ -24,11 +25,105 @@ describe("JobsService", () => {
 	const video = makeTestVideoRecord();
 
 	let service: JobsService;
+	let processingPipelineService: ProcessingPipelineService;
+	let videoRepository: VideoRepositoryService;
+	let blobStorage: BlobStorageService;
+	let processingHistory: ProcessingHistoryService;
+	const callOrder: string[] = [];
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		callOrder.length = 0;
+		processingPipelineService = {
+			runProcessingPipeline: vi.fn(async () => {
+				callOrder.push("pipeline");
+				return {
+					audio: { audioRelativePath: "audio/video-1/track.mp3" },
+					transcript: {
+						transcriptRelativePath: "transcripts/video-1/transcript.json",
+					},
+					phrases: {
+						phrasesRelativePath: "explanations/video-1/phrases.json",
+					},
+					clips: {
+						clipsManifestRelativePath: "explanations/video-1/clips.json",
+					},
+					compose: { enrichedRelativePath: "enriched/video-1/output.mp4" },
+					dash: { segmentCount: 3 },
+				};
+			}),
+		} as unknown as ProcessingPipelineService;
+		videoRepository = {
+			listVideos: vi.fn(async () => [video]),
+			updateVideo: vi.fn(async (_id, patch) => {
+				if (patch.status === "processing") {
+					callOrder.push("mark-processing");
+				}
+				if (patch.status === "ready") {
+					callOrder.push("mark-ready");
+				}
+				return { ...video, ...patch };
+			}),
+		} as unknown as VideoRepositoryService;
+		processingHistory = {
+			recordStepStart: vi.fn(async () => undefined),
+			recordStepComplete: vi.fn(async () => undefined),
+			recordFailure: vi.fn(async () => undefined),
+			markCompleted: vi.fn(async () => {
+				callOrder.push("mark-completed");
+			}),
+		} as unknown as ProcessingHistoryService;
+		blobStorage = {
+			resolveRelativePath: vi.fn(
+				(relativePath: string) => `/tmp/${relativePath}`,
+			),
+		} as unknown as BlobStorageService;
+
+		service = new JobsService(
+			{ info: vi.fn(), error: vi.fn() } as never,
+			processingPipelineService,
+			videoRepository,
+			blobStorage,
+			processingHistory,
+		);
+	});
+
+	it("runs the processing pipeline before marking ready", async () => {
+		await service.processNextPendingVideo();
+
+		expect(callOrder).toEqual([
+			"mark-processing",
+			"pipeline",
+			"mark-completed",
+			"mark-ready",
+		]);
+		expect(videoRepository.updateVideo).toHaveBeenCalledWith("video-1", {
+			status: "ready",
+			segmentCount: 3,
+			transcriptRelativePath: "transcripts/video-1/transcript.json",
+			phrasesRelativePath: "explanations/video-1/phrases.json",
+			failureReason: null,
+		});
+		expect(
+			processingPipelineService.runProcessingPipeline,
+		).toHaveBeenCalledWith(video);
+	});
+});
+
+describe("ProcessingPipelineService", () => {
+	const video = makeTestVideoRecord();
+
+	let service: ProcessingPipelineService;
 	let ffmpegDashService: FfmpegDashService;
 	let ffmpegAudioService: FfmpegAudioService;
 	let transcriptionService: WhisperTranscriptionService;
 	let phraseDetectionService: PhraseDetectionService;
-	let videoRepository: VideoRepositoryService;
+	let explanationClipService: {
+		generateClips: ReturnType<typeof vi.fn>;
+	};
+	let ffmpegComposeService: {
+		composeVideo: ReturnType<typeof vi.fn>;
+	};
 	let blobStorage: BlobStorageService;
 	let processingHistory: ProcessingHistoryService;
 	const callOrder: string[] = [];
@@ -66,95 +161,78 @@ describe("JobsService", () => {
 				};
 			}),
 		} as unknown as PhraseDetectionService;
-		videoRepository = {
-			listVideos: vi.fn(async () => [video]),
-			updateVideo: vi.fn(async (_id, patch) => {
-				if (patch.status === "processing") {
-					callOrder.push("mark-processing");
-				}
-				if (patch.status === "ready") {
-					callOrder.push("mark-ready");
-				}
-				return { ...video, ...patch };
+		explanationClipService = {
+			generateClips: vi.fn(async () => {
+				callOrder.push("clips");
+				return {
+					clipsManifestRelativePath: "explanations/video-1/clips.json",
+				};
 			}),
-		} as unknown as VideoRepositoryService;
+		};
+		ffmpegComposeService = {
+			composeVideo: vi.fn(async () => {
+				callOrder.push("compose");
+				return { enrichedRelativePath: "enriched/video-1/output.mp4" };
+			}),
+		};
 		processingHistory = {
 			recordStepStart: vi.fn(async () => undefined),
 			recordStepComplete: vi.fn(async () => undefined),
-			recordFailure: vi.fn(async () => undefined),
-			markCompleted: vi.fn(async () => {
-				callOrder.push("mark-completed");
-			}),
 		} as unknown as ProcessingHistoryService;
 		blobStorage = {
-			resolveRelativePath: vi.fn(
-				(relativePath: string) => `/tmp/${relativePath}`,
-			),
 			getAudioRelativePath: vi.fn(() => "audio/video-1/track.mp3"),
 			getTranscriptRelativePath: vi.fn(
 				() => "transcripts/video-1/transcript.json",
 			),
 			getPhrasesRelativePath: vi.fn(() => "explanations/video-1/phrases.json"),
+			getClipsManifestRelativePath: vi.fn(
+				() => "explanations/video-1/clips.json",
+			),
+			getEnrichedVideoRelativePath: vi.fn(() => "enriched/video-1/output.mp4"),
 			fileExists: vi.fn(async (relativePath: string) =>
 				existingFiles.has(relativePath),
 			),
 		} as unknown as BlobStorageService;
 
-		service = new JobsService(
-			{ info: vi.fn(), error: vi.fn() } as never,
+		service = new ProcessingPipelineService(
+			{ info: vi.fn() } as never,
 			ffmpegDashService,
 			ffmpegAudioService,
+			ffmpegComposeService as never,
 			transcriptionService,
 			phraseDetectionService,
-			videoRepository,
+			explanationClipService as never,
 			blobStorage,
 			processingHistory,
 		);
 	});
 
-	it("runs audio extraction, transcription, phrase detection, and DASH before marking ready", async () => {
-		await service.processNextPendingVideo();
+	it("runs all pipeline steps in order", async () => {
+		await service.runProcessingPipeline(video);
 
 		expect(callOrder).toEqual([
-			"mark-processing",
 			"audio",
 			"transcribe",
 			"phrases",
+			"clips",
+			"compose",
 			"dash",
-			"mark-completed",
-			"mark-ready",
 		]);
-		expect(videoRepository.updateVideo).toHaveBeenCalledWith("video-1", {
-			status: "ready",
-			segmentCount: 3,
-			transcriptRelativePath: "transcripts/video-1/transcript.json",
-			phrasesRelativePath: "explanations/video-1/phrases.json",
-			failureReason: null,
-		});
-		expect(processingHistory.recordStepStart).toHaveBeenCalledTimes(4);
-		expect(processingHistory.markCompleted).toHaveBeenCalledWith("video-1");
+		expect(processingHistory.recordStepStart).toHaveBeenCalledTimes(6);
 	});
 
 	it("skips steps whose outputs already exist", async () => {
 		existingFiles.add("audio/video-1/track.mp3");
 		existingFiles.add("transcripts/video-1/transcript.json");
 		existingFiles.add("explanations/video-1/phrases.json");
+		existingFiles.add("explanations/video-1/clips.json");
+		existingFiles.add("enriched/video-1/output.mp4");
 
-		await service.processNextPendingVideo();
+		await service.runProcessingPipeline(video);
 
-		expect(callOrder).toEqual([
-			"mark-processing",
-			"dash",
-			"mark-completed",
-			"mark-ready",
-		]);
+		expect(callOrder).toEqual(["dash"]);
 		expect(ffmpegAudioService.extractAudio).not.toHaveBeenCalled();
-		expect(transcriptionService.transcribe).not.toHaveBeenCalled();
-		expect(phraseDetectionService.detectPhrases).not.toHaveBeenCalled();
-		expect(processingHistory.recordStepComplete).toHaveBeenCalledWith({
-			videoId: "video-1",
-			step: "audio_extract",
-			message: "skipped (already present)",
-		});
+		expect(explanationClipService.generateClips).not.toHaveBeenCalled();
+		expect(ffmpegComposeService.composeVideo).not.toHaveBeenCalled();
 	});
 });
