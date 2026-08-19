@@ -1,15 +1,15 @@
 import { Module } from "@nestjs/common";
 
-import { ExplanationClipService } from "./explanation-clip.service";
-import { ExplanationTtsService } from "./explanation-tts.service";
-import { FfmpegAudioService } from "./ffmpeg-audio.service";
-import { FfmpegComposeService } from "./ffmpeg-compose.service";
-import { FfmpegDashService } from "./ffmpeg-dash.service";
+import { FfmpegAudioService } from "./audio-extract/ffmpeg-audio.service";
+import { FfmpegComposeService } from "./composing-video/ffmpeg-compose.service";
+import { PhraseDetectionService } from "./detecting-phrases/phrase-detection.service";
+import { FfmpegDashService } from "./dash-encoding/ffmpeg-dash.service";
+import { ExplanationClipService } from "./generating-clips/explanation-clip.service";
+import { ExplanationTtsService } from "./generating-clips/explanation-tts.service";
 import { JobsService } from "./jobs.service";
-import { PhraseDetectionService } from "./phrase-detection.service";
 import { ProcessingPipelineService } from "./processing-pipeline.service";
 import { ProcessingWorkerService } from "./processing.service";
-import { WhisperTranscriptionService } from "./transcription.service";
+import { WhisperTranscriptionService } from "./transcribing/transcription.service";
 
 @Module({
 	providers: [

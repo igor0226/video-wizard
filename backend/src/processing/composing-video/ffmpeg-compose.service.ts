@@ -4,11 +4,11 @@ import path from "node:path";
 import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 
-import { BlobStorageService, type VideoRecord } from "../storage";
-import type { ExplanationClipsManifest } from "./explanation-clip.service";
+import { BlobStorageService, type VideoRecord } from "../../storage";
+import type { ExplanationClipsManifest } from "../generating-clips/explanation-clip.service";
 import { buildCompositionParts } from "./compose-plan";
-import { probeMediaDurationSeconds, probeVideoFile } from "./ffmpeg-probe";
-import { normalizeFfmpegError, runProcess } from "./ffmpeg-process";
+import { probeMediaDurationSeconds, probeVideoFile } from "../shared/ffmpeg-probe";
+import { normalizeFfmpegError, runProcess } from "../shared/ffmpeg-process";
 
 export type ComposeVideoInput = {
 	video: VideoRecord;

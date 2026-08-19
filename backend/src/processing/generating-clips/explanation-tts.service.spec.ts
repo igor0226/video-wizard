@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BlobStorageService } from "../storage";
+import { BlobStorageService } from "../../storage";
 import { ExplanationTtsService } from "./explanation-tts.service";
 
 const speechCreate = vi.fn();
@@ -15,7 +15,7 @@ vi.mock("openai", () => ({
 	})),
 }));
 
-vi.mock("./ffmpeg-probe", () => ({
+vi.mock("../shared/ffmpeg-probe", () => ({
 	probeAudioDurationSeconds: vi.fn(async () => 4.2),
 }));
 

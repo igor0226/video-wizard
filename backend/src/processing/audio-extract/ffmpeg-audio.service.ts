@@ -3,8 +3,8 @@ import path from "node:path";
 import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 
-import { BlobStorageService, type VideoRecord } from "../storage";
-import { normalizeFfmpegError, runProcess } from "./ffmpeg-process";
+import { BlobStorageService, type VideoRecord } from "../../storage";
+import { normalizeFfmpegError, runProcess } from "../shared/ffmpeg-process";
 
 export type ExtractAudioResult = {
 	audioRelativePath: string;

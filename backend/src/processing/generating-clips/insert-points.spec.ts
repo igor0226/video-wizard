@@ -4,8 +4,8 @@ import {
 	buildPhraseInsertPoints,
 	resolveInsertAtSeconds,
 } from "./insert-points";
-import type { DetectedPhrase } from "./phrase-detection.service";
-import type { WhisperTranscript } from "./merge-transcripts";
+import type { DetectedPhrase } from "../detecting-phrases/phrase-detection.service";
+import type { WhisperTranscript } from "../shared/merge-transcripts";
 
 function makePhrase(overrides: Partial<DetectedPhrase> = {}): DetectedPhrase {
 	return {
@@ -66,6 +66,21 @@ describe("resolveInsertAtSeconds", () => {
 		};
 
 		expect(resolveInsertAtSeconds(transcript, 1)).toBe(0.8);
+	});
+
+	it("snaps past a word still speaking when segment end is inside it", () => {
+		const transcript: WhisperTranscript = {
+			language: "english",
+			duration: 10,
+			text: "Hello world",
+			words: [
+				{ word: "Hello", start: 0, end: 0.4 },
+				{ word: "world", start: 0.4, end: 1.2 },
+			],
+			segments: [{ start: 0, end: 0.9, text: "Hello world." }],
+		};
+
+		expect(resolveInsertAtSeconds(transcript, 1)).toBe(1.2);
 	});
 });
 

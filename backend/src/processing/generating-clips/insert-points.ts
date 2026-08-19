@@ -1,9 +1,9 @@
-import type { DetectedPhrase } from "./phrase-detection.service";
+import type { DetectedPhrase } from "../detecting-phrases/phrase-detection.service";
 import type {
 	WhisperSegment,
 	WhisperTranscript,
 	WhisperWord,
-} from "./merge-transcripts";
+} from "../shared/merge-transcripts";
 
 export type TranscriptWithSegments = WhisperTranscript;
 
@@ -52,7 +52,7 @@ function findSentenceEndByWords(
 	return words.at(-1)?.end ?? endWord.end;
 }
 
-export function resolveInsertAtSeconds(
+function resolveCandidateInsertAtSeconds(
 	transcript: TranscriptWithSegments,
 	endWordIndex: number,
 ): number {
@@ -71,6 +71,45 @@ export function resolveInsertAtSeconds(
 	}
 
 	return findSentenceEndByWords(words, endWordIndex);
+}
+
+function snapPastActiveSpeech(input: {
+	words: WhisperWord[];
+	insertAtSeconds: number;
+	maxSeconds?: number;
+}): number {
+	let insertAt = input.insertAtSeconds;
+
+	while (true) {
+		const overlapping = input.words.filter(
+			(word) => word.start < insertAt && word.end > insertAt,
+		);
+		if (overlapping.length === 0) {
+			break;
+		}
+
+		insertAt = Math.max(...overlapping.map((word) => word.end));
+	}
+
+	if (input.maxSeconds !== undefined) {
+		return Math.min(insertAt, input.maxSeconds);
+	}
+
+	return insertAt;
+}
+
+export function resolveInsertAtSeconds(
+	transcript: TranscriptWithSegments,
+	endWordIndex: number,
+): number {
+	const words = transcript.words ?? [];
+	const candidate = resolveCandidateInsertAtSeconds(transcript, endWordIndex);
+
+	return snapPastActiveSpeech({
+		words,
+		insertAtSeconds: candidate,
+		maxSeconds: transcript.duration,
+	});
 }
 
 export function buildPhraseInsertPoints(

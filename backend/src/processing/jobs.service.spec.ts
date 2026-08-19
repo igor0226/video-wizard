@@ -6,12 +6,12 @@ import {
 	VideoRepositoryService,
 } from "../storage";
 import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
-import { FfmpegAudioService } from "./ffmpeg-audio.service";
-import { FfmpegDashService } from "./ffmpeg-dash.service";
+import { FfmpegAudioService } from "./audio-extract/ffmpeg-audio.service";
+import { PhraseDetectionService } from "./detecting-phrases/phrase-detection.service";
+import { FfmpegDashService } from "./dash-encoding/ffmpeg-dash.service";
 import { JobsService } from "./jobs.service";
-import { PhraseDetectionService } from "./phrase-detection.service";
 import { ProcessingPipelineService } from "./processing-pipeline.service";
-import { WhisperTranscriptionService } from "./transcription.service";
+import { WhisperTranscriptionService } from "./transcribing/transcription.service";
 
 vi.mock("node:fs/promises", () => ({
 	open: vi.fn(async () => ({

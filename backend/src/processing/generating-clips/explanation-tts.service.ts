@@ -4,8 +4,8 @@ import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 import OpenAI from "openai";
 
-import { BlobStorageService } from "../storage";
-import { probeAudioDurationSeconds } from "./ffmpeg-probe";
+import { BlobStorageService } from "../../storage";
+import { probeAudioDurationSeconds } from "../shared/ffmpeg-probe";
 
 const TTS_MODEL = "gpt-4o-mini-tts";
 const TTS_VOICE = "coral";

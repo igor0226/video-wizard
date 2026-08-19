@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { DashService } from "./dash/dash.service";
-import { FfmpegAudioService } from "./processing/ffmpeg-audio.service";
-import { FfmpegDashService } from "./processing/ffmpeg-dash.service";
+import { FfmpegAudioService } from "./processing/audio-extract/ffmpeg-audio.service";
+import { FfmpegDashService } from "./processing/dash-encoding/ffmpeg-dash.service";
 import { JobsService } from "./processing/jobs.service";
 import { ProcessingWorkerService } from "./processing/processing.service";
-import { WhisperTranscriptionService } from "./processing/transcription.service";
+import { WhisperTranscriptionService } from "./processing/transcribing/transcription.service";
 import { BlobStorageService, VideoRepositoryService } from "./storage";
 import { VideosService } from "./videos/videos.service";
 import { createTestApp } from "../test/create-test-app";

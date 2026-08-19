@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildCompositionParts } from "./compose-plan";
-import type { ExplanationClipManifestEntry } from "./explanation-clip.service";
+import type { ExplanationClipManifestEntry } from "../generating-clips/explanation-clip.service";
 
 describe("buildCompositionParts", () => {
 	it("returns a single source part when there are no clips", () => {

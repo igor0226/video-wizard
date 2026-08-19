@@ -2,9 +2,9 @@ import { createReadStream } from "node:fs";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BlobStorageService } from "../storage";
-import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
-import type { ExtractAudioResult } from "./ffmpeg-audio.service";
+import { BlobStorageService } from "../../storage";
+import { makeTestVideoRecord } from "../../../test/helpers/make-test-video-record";
+import type { ExtractAudioResult } from "../audio-extract/ffmpeg-audio.service";
 import { WhisperTranscriptionService } from "./transcription.service";
 
 const createMock = vi.fn();

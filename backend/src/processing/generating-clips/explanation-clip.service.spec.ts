@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BlobStorageService } from "../storage";
-import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
+import { BlobStorageService } from "../../storage";
+import { makeTestVideoRecord } from "../../../test/helpers/make-test-video-record";
 import { ExplanationClipService } from "./explanation-clip.service";
 import { ExplanationTtsService } from "./explanation-tts.service";
+import { runProcess } from "../shared/ffmpeg-process";
 
-vi.mock("./ffmpeg-probe", () => ({
+vi.mock("node:fs/promises", () => ({
+	writeFile: vi.fn(async () => undefined),
+}));
+
+vi.mock("../shared/ffmpeg-probe", () => ({
 	probeVideoFile: vi.fn(async () => ({
 		width: 1280,
 		height: 720,
@@ -15,7 +20,7 @@ vi.mock("./ffmpeg-probe", () => ({
 	})),
 }));
 
-vi.mock("./ffmpeg-process", () => ({
+vi.mock("../shared/ffmpeg-process", () => ({
 	runProcess: vi.fn(async () => undefined),
 	normalizeFfmpegError: vi.fn((error: unknown) => error),
 }));
@@ -84,5 +89,64 @@ describe("ExplanationClipService", () => {
 			{ clips: [] },
 		);
 		expect(explanationTtsService.synthesizeSpeech).not.toHaveBeenCalled();
+	});
+
+	it("renders clips with 500ms gaps and padded duration", async () => {
+		vi.mocked(blobStorage.readText).mockImplementation(async (relativePath) => {
+			if (relativePath.endsWith("phrases.json")) {
+				return JSON.stringify({
+					phrases: [
+						{
+							phrase: "Hello world",
+							startWordIndex: 0,
+							endWordIndex: 1,
+							explanation: "A greeting.",
+							difficulty: "easy",
+						},
+					],
+				});
+			}
+
+			return JSON.stringify({
+				language: "english",
+				duration: 10,
+				text: "Hello world.",
+				words: [
+					{ word: "Hello", start: 0, end: 0.4 },
+					{ word: "world.", start: 0.4, end: 0.8 },
+				],
+			});
+		});
+
+		await service.generateClips({
+			video,
+			phrasesRelativePath: "explanations/video-1/phrases.json",
+			transcriptRelativePath: "transcripts/video-1/transcript.json",
+		});
+
+		expect(blobStorage.writeJson).toHaveBeenCalledWith(
+			"explanations/video-1/clips.json",
+			{
+				clips: [
+					expect.objectContaining({
+						phrase: "Hello world",
+						insertAtSeconds: 0.8,
+						durationSeconds: 4,
+					}),
+				],
+			},
+		);
+		expect(runProcess).toHaveBeenCalledWith(
+			"ffmpeg",
+			expect.arrayContaining([
+				"-t",
+				"4",
+				"-filter:a",
+				"adelay=500|500,apad=pad_dur=0.5",
+			]),
+		);
+		expect(
+			vi.mocked(runProcess).mock.calls[0]?.[1]?.includes("-shortest"),
+		).toBe(false);
 	});
 });

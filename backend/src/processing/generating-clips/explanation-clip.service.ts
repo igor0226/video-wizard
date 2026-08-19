@@ -4,8 +4,13 @@ import path from "node:path";
 import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 
-import { BlobStorageService, type VideoRecord } from "../storage";
+import { BlobStorageService, type VideoRecord } from "../../storage";
 import { buildExplanationAss } from "./explanation-ass";
+import {
+	buildClipRenderArgs,
+	CLIP_GAP_SECONDS,
+	computeClipDurationSeconds,
+} from "./explanation-clip-render";
 import {
 	buildPhraseInsertPoints,
 	type PhraseInsertPoint,
@@ -17,11 +22,9 @@ import {
 	getClipAudioRelativePath,
 	getClipVideoRelativePath,
 } from "./explanation-tts.service";
-import { probeVideoFile } from "./ffmpeg-probe";
-import { normalizeFfmpegError, runProcess } from "./ffmpeg-process";
-import type { DetectedPhrase } from "./phrase-detection.service";
-
-const CLIP_PADDING_SECONDS = 0.3;
+import { probeVideoFile } from "../shared/ffmpeg-probe";
+import { normalizeFfmpegError, runProcess } from "../shared/ffmpeg-process";
+import type { DetectedPhrase } from "../detecting-phrases/phrase-detection.service";
 
 export type ExplanationClipManifestEntry = {
 	index: number;
@@ -127,46 +130,29 @@ export class ExplanationClipService {
 				outputRelativePath: audioRelativePath,
 			});
 
-		const durationSeconds = ttsDurationSeconds + CLIP_PADDING_SECONDS;
+		const durationSeconds = computeClipDurationSeconds(ttsDurationSeconds);
 		const assContent = buildExplanationAss({
 			phrase: phrase.phrase,
 			explanation: phrase.explanation,
 			durationSeconds,
+			ttsDurationSeconds,
+			bodyStartOffsetSeconds: CLIP_GAP_SECONDS,
 			width: probe.width,
 			height: probe.height,
 		});
 		await writeFile(assAbsolutePath, assContent, "utf8");
 
-		const escapedAssPath = assAbsolutePath.replace(/'/g, "'\\''");
-		const args = [
-			"-y",
-			"-f",
-			"lavfi",
-			"-i",
-			`color=c=0x111827:s=${probe.width}x${probe.height}:r=${probe.fps}:d=${durationSeconds}`,
-			"-i",
+		const args = buildClipRenderArgs({
+			width: probe.width,
+			height: probe.height,
+			fps: probe.fps,
+			durationSeconds,
 			audioAbsolutePath,
-			"-vf",
-			`subtitles='${escapedAssPath}'`,
-			"-c:v",
-			"libx264",
-			"-preset",
-			"veryfast",
-			"-crf",
-			"23",
-			"-pix_fmt",
-			"yuv420p",
-			"-c:a",
-			"aac",
-			"-b:a",
-			"128k",
-			"-ar",
-			String(probe.audioSampleRate),
-			"-ac",
-			String(probe.audioChannels),
-			"-shortest",
-			videoAbsolutePath,
-		];
+			assAbsolutePath,
+			audioSampleRate: probe.audioSampleRate,
+			audioChannels: probe.audioChannels,
+			outputAbsolutePath: videoAbsolutePath,
+		});
 
 		try {
 			this.logger.info(
