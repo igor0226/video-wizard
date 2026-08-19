@@ -9,12 +9,33 @@ import { probeAudioDurationSeconds } from "../shared/ffmpeg-probe";
 
 const TTS_MODEL = "gpt-4o-mini-tts";
 const TTS_VOICE = "coral";
+const SENTENCE_END_PATTERN = /[.!?]$/;
 
 export type SynthesizeSpeechInput = {
+	phrase: string;
 	explanation: string;
 	explanationLanguage: string;
 	outputRelativePath: string;
 };
+
+export function buildExplanationSpeechText(input: {
+	phrase: string;
+	explanation: string;
+}): string {
+	const phrase = input.phrase.trim();
+	const explanation = input.explanation.trim();
+
+	if (!phrase) {
+		return explanation;
+	}
+
+	if (!explanation) {
+		return phrase;
+	}
+
+	const separator = SENTENCE_END_PATTERN.test(phrase) ? " " : ". ";
+	return `${phrase}${separator}${explanation}`;
+}
 
 @Injectable()
 export class ExplanationTtsService {
@@ -43,7 +64,10 @@ export class ExplanationTtsService {
 		const response = await client.audio.speech.create({
 			model: TTS_MODEL,
 			voice: TTS_VOICE,
-			input: input.explanation,
+			input: buildExplanationSpeechText({
+				phrase: input.phrase,
+				explanation: input.explanation,
+			}),
 			instructions: `Speak clearly as a language teacher in ${input.explanationLanguage}. Keep a calm, helpful tone.`,
 		});
 

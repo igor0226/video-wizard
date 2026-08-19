@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildExplanationAss, buildExplanationCues } from "./explanation-ass";
+import {
+	buildExplanationAss,
+	buildExplanationCues,
+	getAssStyleMetrics,
+	resolveExplanationBodyTiming,
+} from "./explanation-ass";
 
 describe("buildExplanationCues", () => {
 	it("splits explanation sentences and allocates duration by character weight", () => {
@@ -21,23 +26,46 @@ describe("buildExplanationCues", () => {
 	});
 });
 
+describe("resolveExplanationBodyTiming", () => {
+	it("offsets explanation cues by the phrase share of TTS duration", () => {
+		expect(
+			resolveExplanationBodyTiming({
+				phrase: "Hello world",
+				explanation: "A greeting.",
+				ttsDurationSeconds: 4,
+				clipGapSeconds: 0.5,
+			}),
+		).toEqual({
+			bodyStartOffsetSeconds: 2.5,
+			bodyDurationSeconds: 2,
+		});
+	});
+});
+
 describe("buildExplanationAss", () => {
-	it("escapes ASS control characters and includes phrase title dialogue", () => {
+	it("escapes ASS control characters and uses centered larger styles", () => {
 		const ass = buildExplanationAss({
 			phrase: "as an {icebreaker}",
 			explanation: "Use braces \\ carefully.",
 			durationSeconds: 5,
 			ttsDurationSeconds: 4,
-			bodyStartOffsetSeconds: 0.5,
+			bodyStartOffsetSeconds: 2.5,
+			bodyDurationSeconds: 2,
 			width: 1280,
 			height: 720,
 		});
+		const metrics = getAssStyleMetrics(720);
 
 		expect(ass).toContain("PlayResX: 1280");
 		expect(ass).toContain("PlayResY: 720");
 		expect(ass).toContain("as an \\{icebreaker\\}");
 		expect(ass).toContain("Use braces \\\\ carefully.");
-		expect(ass).toContain("Style: Title");
-		expect(ass).toContain("Style: Body");
+		expect(ass).toContain(`Style: Title,DejaVu Sans,${metrics.titleFontSize}`);
+		expect(ass).toContain(`Style: Body,DejaVu Sans,${metrics.bodyFontSize}`);
+		expect(metrics.titleFontSize).toBe(56);
+		expect(metrics.bodyFontSize).toBe(37);
+		expect(metrics.marginV).toBe(259);
+		expect(ass).toContain(",8,10,10,259,1");
+		expect(ass).toContain(",2,10,10,259,2");
 	});
 });

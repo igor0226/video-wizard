@@ -5,7 +5,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 
 import { BlobStorageService, type VideoRecord } from "../../storage";
-import { buildExplanationAss } from "./explanation-ass";
+import { buildExplanationAss, resolveExplanationBodyTiming } from "./explanation-ass";
 import {
 	buildClipRenderArgs,
 	CLIP_GAP_SECONDS,
@@ -161,18 +161,27 @@ export class ExplanationClipService {
 
 		const { durationSeconds: ttsDurationSeconds } =
 			await this.explanationTtsService.synthesizeSpeech({
+				phrase: phrase.phrase,
 				explanation: phrase.explanation,
 				explanationLanguage: video.explanationLanguage,
 				outputRelativePath: audioRelativePath,
 			});
 
 		const durationSeconds = computeClipDurationSeconds(ttsDurationSeconds);
+		const { bodyStartOffsetSeconds, bodyDurationSeconds } =
+			resolveExplanationBodyTiming({
+				phrase: phrase.phrase,
+				explanation: phrase.explanation,
+				ttsDurationSeconds,
+				clipGapSeconds: CLIP_GAP_SECONDS,
+			});
 		const assContent = buildExplanationAss({
 			phrase: phrase.phrase,
 			explanation: phrase.explanation,
 			durationSeconds,
 			ttsDurationSeconds,
-			bodyStartOffsetSeconds: CLIP_GAP_SECONDS,
+			bodyStartOffsetSeconds,
+			bodyDurationSeconds,
 			width: probe.width,
 			height: probe.height,
 		});
