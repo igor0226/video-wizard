@@ -5,6 +5,7 @@ import { makeTestVideoRecord } from "../../../test/helpers/make-test-video-recor
 import { ExplanationClipService } from "./explanation-clip.service";
 import { ExplanationTtsService } from "./explanation-tts.service";
 import { runProcess } from "../shared/ffmpeg-process";
+import { probeLoudnormStats } from "../shared/ffmpeg-loudness";
 
 vi.mock("node:fs/promises", () => ({
 	writeFile: vi.fn(async () => undefined),
@@ -20,10 +21,37 @@ vi.mock("../shared/ffmpeg-probe", () => ({
 	})),
 }));
 
+vi.mock("../shared/ffmpeg-loudness", async (importOriginal) => {
+	const actual = await importOriginal<
+		typeof import("../shared/ffmpeg-loudness")
+	>();
+
+	return {
+		...actual,
+		probeLoudnormStats: vi.fn(),
+	};
+});
+
 vi.mock("../shared/ffmpeg-process", () => ({
 	runProcess: vi.fn(async () => undefined),
 	normalizeFfmpegError: vi.fn((error: unknown) => error),
 }));
+
+const SOURCE_LOUDNESS = {
+	input_i: -18.2,
+	input_tp: -2.1,
+	input_lra: 6.5,
+	input_thresh: -28.4,
+	target_offset: 1.3,
+};
+
+const TTS_LOUDNESS = {
+	input_i: -30.5,
+	input_tp: -8.2,
+	input_lra: 4.1,
+	input_thresh: -40.3,
+	target_offset: 12.5,
+};
 
 describe("ExplanationClipService", () => {
 	const video = makeTestVideoRecord();
@@ -34,6 +62,13 @@ describe("ExplanationClipService", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(probeLoudnormStats).mockImplementation(async (absolutePath) => {
+			if (absolutePath.includes("/uploads/")) {
+				return SOURCE_LOUDNESS;
+			}
+
+			return TTS_LOUDNESS;
+		});
 		blobStorage = {
 			ensureLayout: vi.fn(async () => undefined),
 			getClipsDirectoryRelativePath: vi.fn(() => "explanations/video-1/clips"),
@@ -91,7 +126,7 @@ describe("ExplanationClipService", () => {
 		expect(explanationTtsService.synthesizeSpeech).not.toHaveBeenCalled();
 	});
 
-	it("renders clips with 500ms gaps and padded duration", async () => {
+	it("renders clips with loudness matched to the source video", async () => {
 		vi.mocked(blobStorage.readText).mockImplementation(async (relativePath) => {
 			if (relativePath.endsWith("phrases.json")) {
 				return JSON.stringify({
@@ -136,17 +171,19 @@ describe("ExplanationClipService", () => {
 				],
 			},
 		);
-		expect(runProcess).toHaveBeenCalledWith(
-			"ffmpeg",
-			expect.arrayContaining([
-				"-t",
-				"4",
-				"-filter:a",
-				"adelay=500|500,apad=pad_dur=0.5",
-			]),
+		expect(probeLoudnormStats).toHaveBeenCalledTimes(2);
+		expect(probeLoudnormStats).toHaveBeenCalledWith(
+			"/tmp/uploads/video-1/source.mp4",
 		);
-		expect(
-			vi.mocked(runProcess).mock.calls[0]?.[1]?.includes("-shortest"),
-		).toBe(false);
+		expect(probeLoudnormStats).toHaveBeenCalledWith(
+			"/tmp/explanations/video-1/clips/000.mp3",
+		);
+		const ffmpegArgs = vi.mocked(runProcess).mock.calls[0]?.[1] ?? [];
+		const filterIndex = ffmpegArgs.indexOf("-filter:a");
+		const audioFilter = ffmpegArgs[filterIndex + 1];
+
+		expect(audioFilter).toContain("loudnorm=I=-18.2");
+		expect(audioFilter).toContain("adelay=500|500,apad=pad_dur=0.5");
+		expect(ffmpegArgs.includes("-shortest")).toBe(false);
 	});
 });

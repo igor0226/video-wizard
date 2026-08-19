@@ -1,3 +1,8 @@
+import {
+	buildLoudnormFilter,
+	type LoudnormStats,
+} from "../shared/ffmpeg-loudness";
+
 export const CLIP_GAP_SECONDS = 0.5;
 
 export function computeClipDurationSeconds(ttsDurationSeconds: number): number {
@@ -7,13 +12,19 @@ export function computeClipDurationSeconds(ttsDurationSeconds: number): number {
 export function buildClipAudioFilter(input: {
 	gapSeconds: number;
 	channels: number;
+	targetIntegratedLufs: number;
+	ttsLoudness: LoudnormStats;
 }): string {
+	const loudnorm = buildLoudnormFilter({
+		targetIntegratedLufs: input.targetIntegratedLufs,
+		measured: input.ttsLoudness,
+	});
 	const delayMs = Math.round(input.gapSeconds * 1000);
 	const delaySpec = Array.from({ length: input.channels }, () =>
 		String(delayMs),
 	).join("|");
 
-	return `adelay=${delaySpec},apad=pad_dur=${input.gapSeconds}`;
+	return `${loudnorm},adelay=${delaySpec},apad=pad_dur=${input.gapSeconds}`;
 }
 
 export function buildClipRenderArgs(input: {
@@ -25,6 +36,8 @@ export function buildClipRenderArgs(input: {
 	assAbsolutePath: string;
 	audioSampleRate: number;
 	audioChannels: number;
+	targetIntegratedLufs: number;
+	ttsLoudness: LoudnormStats;
 	outputAbsolutePath: string;
 }): string[] {
 	const escapedAssPath = input.assAbsolutePath.replace(/'/g, "'\\''");
@@ -43,6 +56,8 @@ export function buildClipRenderArgs(input: {
 		buildClipAudioFilter({
 			gapSeconds: CLIP_GAP_SECONDS,
 			channels: input.audioChannels,
+			targetIntegratedLufs: input.targetIntegratedLufs,
+			ttsLoudness: input.ttsLoudness,
 		}),
 		"-t",
 		String(input.durationSeconds),

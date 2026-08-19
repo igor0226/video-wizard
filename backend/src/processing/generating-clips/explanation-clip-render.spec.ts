@@ -6,6 +6,14 @@ import {
 	computeClipDurationSeconds,
 } from "./explanation-clip-render";
 
+const TTS_LOUDNESS = {
+	input_i: -30.5,
+	input_tp: -8.2,
+	input_lra: 4.1,
+	input_thresh: -40.3,
+	target_offset: 12.5,
+};
+
 describe("computeClipDurationSeconds", () => {
 	it("adds 500ms gaps before and after TTS audio", () => {
 		expect(computeClipDurationSeconds(3)).toBe(4);
@@ -13,10 +21,18 @@ describe("computeClipDurationSeconds", () => {
 });
 
 describe("buildClipAudioFilter", () => {
-	it("delays and pads audio for stereo clips", () => {
-		expect(buildClipAudioFilter({ gapSeconds: 0.5, channels: 2 })).toBe(
-			"adelay=500|500,apad=pad_dur=0.5",
-		);
+	it("normalizes TTS loudness before adding clip gaps", () => {
+		const filter = buildClipAudioFilter({
+			gapSeconds: 0.5,
+			channels: 2,
+			targetIntegratedLufs: -18.2,
+			ttsLoudness: TTS_LOUDNESS,
+		});
+
+		expect(filter).toContain("loudnorm=I=-18.2");
+		expect(filter).toContain("linear=true");
+		expect(filter).toContain("adelay=500|500,apad=pad_dur=0.5");
+		expect(filter.indexOf("loudnorm=")).toBeLessThan(filter.indexOf("adelay="));
 	});
 });
 
@@ -31,12 +47,16 @@ describe("buildClipRenderArgs", () => {
 			assAbsolutePath: "/tmp/clip.ass",
 			audioSampleRate: 48_000,
 			audioChannels: 2,
+			targetIntegratedLufs: -18.2,
+			ttsLoudness: TTS_LOUDNESS,
 			outputAbsolutePath: "/tmp/clip.mp4",
 		});
 
 		expect(args).toContain("-t");
 		expect(args).toContain("4");
 		expect(args).not.toContain("-shortest");
-		expect(args).toContain("adelay=500|500,apad=pad_dur=0.5");
+		expect(args).toContain("-filter:a");
+		expect(args.join(" ")).toContain("loudnorm=I=-18.2");
+		expect(args.join(" ")).toContain("adelay=500|500,apad=pad_dur=0.5");
 	});
 });

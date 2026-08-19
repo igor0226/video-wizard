@@ -23,6 +23,11 @@ import {
 	getClipVideoRelativePath,
 } from "./explanation-tts.service";
 import { probeVideoFile } from "../shared/ffmpeg-probe";
+import {
+	DEFAULT_INTEGRATED_LUFS,
+	probeLoudnormStats,
+	resolveTargetIntegratedLufs,
+} from "../shared/ffmpeg-loudness";
 import { normalizeFfmpegError, runProcess } from "../shared/ffmpeg-process";
 import type { DetectedPhrase } from "../detecting-phrases/phrase-detection.service";
 
@@ -83,6 +88,10 @@ export class ExplanationClipService {
 		const sourceAbsolutePath =
 			this.blobStorage.getStoragePathsForVideo(video).sourceAbsolutePath;
 		const probe = await probeVideoFile(sourceAbsolutePath);
+		const targetIntegratedLufs = await this.resolveSourceTargetLufs({
+			sourceAbsolutePath,
+			videoId: video.id,
+		});
 
 		const clips: ExplanationClipManifestEntry[] = [];
 		for (const insertPoint of insertPoints) {
@@ -90,6 +99,7 @@ export class ExplanationClipService {
 				video,
 				insertPoint,
 				probe,
+				targetIntegratedLufs,
 			});
 			clips.push(clip);
 		}
@@ -106,12 +116,38 @@ export class ExplanationClipService {
 		return { clipsManifestRelativePath };
 	}
 
+	private async resolveSourceTargetLufs(input: {
+		sourceAbsolutePath: string;
+		videoId: string;
+	}): Promise<number> {
+		try {
+			const sourceLoudness = await probeLoudnormStats(input.sourceAbsolutePath);
+			const targetIntegratedLufs = resolveTargetIntegratedLufs(sourceLoudness);
+			this.logger.info(
+				{
+					videoId: input.videoId,
+					sourceIntegratedLufs: sourceLoudness.input_i,
+					targetIntegratedLufs,
+				},
+				"explanation-clips-source-loudness",
+			);
+			return targetIntegratedLufs;
+		} catch (error) {
+			this.logger.warn(
+				{ videoId: input.videoId, err: error },
+				"explanation-clips-source-loudness-fallback",
+			);
+			return DEFAULT_INTEGRATED_LUFS;
+		}
+	}
+
 	private async renderClip(input: {
 		video: VideoRecord;
 		insertPoint: PhraseInsertPoint;
 		probe: Awaited<ReturnType<typeof probeVideoFile>>;
+		targetIntegratedLufs: number;
 	}): Promise<ExplanationClipManifestEntry> {
-		const { video, insertPoint, probe } = input;
+		const { video, insertPoint, probe, targetIntegratedLufs } = input;
 		const { index, phrase, insertAtSeconds } = insertPoint;
 		const audioRelativePath = getClipAudioRelativePath(video.id, index);
 		const assRelativePath = getClipAssRelativePath(video.id, index);
@@ -142,6 +178,7 @@ export class ExplanationClipService {
 		});
 		await writeFile(assAbsolutePath, assContent, "utf8");
 
+		const ttsLoudness = await probeLoudnormStats(audioAbsolutePath);
 		const args = buildClipRenderArgs({
 			width: probe.width,
 			height: probe.height,
@@ -151,6 +188,8 @@ export class ExplanationClipService {
 			assAbsolutePath,
 			audioSampleRate: probe.audioSampleRate,
 			audioChannels: probe.audioChannels,
+			targetIntegratedLufs,
+			ttsLoudness,
 			outputAbsolutePath: videoAbsolutePath,
 		});
 

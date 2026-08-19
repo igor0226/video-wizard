@@ -54,6 +54,32 @@ export function runProcessWithOutput(
 	});
 }
 
+export function runProcessWithStderr(
+	command: string,
+	args: string[],
+): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const child = spawn(command, args, { stdio: ["ignore", "ignore", "pipe"] });
+		let stderr = "";
+
+		child.stderr.on("data", (chunk) => {
+			stderr += chunk.toString("utf8");
+		});
+
+		child.on("error", (error) => {
+			reject(error);
+		});
+
+		child.on("close", (exitCode) => {
+			if (exitCode === 0) {
+				resolve(stderr);
+				return;
+			}
+			reject(new Error(stderr || `Process exited with code ${exitCode}`));
+		});
+	});
+}
+
 export function normalizeFfmpegError(error: unknown): Error {
 	const message =
 		error instanceof Error ? error.message : "Unknown ffmpeg failure";
