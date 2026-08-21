@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BlobStorageService } from "../storage";
-import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
+import { BlobStorageService } from "../../storage";
+import { makeTestVideoRecord } from "../../../test/helpers/make-test-video-record";
 import { PhraseDetectionService } from "./phrase-detection.service";
 
 const parseMock = vi.fn();

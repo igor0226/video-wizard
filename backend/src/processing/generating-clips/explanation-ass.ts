@@ -2,6 +2,9 @@ export type ExplanationAssInput = {
 	phrase: string;
 	explanation: string;
 	durationSeconds: number;
+	ttsDurationSeconds: number;
+	bodyStartOffsetSeconds: number;
+	bodyDurationSeconds: number;
 	width: number;
 	height: number;
 };
@@ -11,6 +14,10 @@ export type AssCue = {
 	endSeconds: number;
 	text: string;
 };
+
+const TITLE_FONT_SCALE = 0.078;
+const BODY_FONT_SCALE = 0.052;
+const VERTICAL_MARGIN_SCALE = 0.36;
 
 function escapeAssText(text: string): string {
 	return text
@@ -45,9 +52,47 @@ function splitExplanationSentences(explanation: string): string[] {
 	return parts.map((part) => part.trim()).filter(Boolean);
 }
 
+function buildAssStyles(height: number): { titleStyle: string; bodyStyle: string } {
+	const titleFontSize = Math.round(height * TITLE_FONT_SCALE);
+	const bodyFontSize = Math.round(height * BODY_FONT_SCALE);
+	const marginV = Math.round(height * VERTICAL_MARGIN_SCALE);
+
+	return {
+		titleStyle: `Style: Title,DejaVu Sans,${titleFontSize},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,2,2,8,10,10,${marginV},1`,
+		bodyStyle: `Style: Body,DejaVu Sans,${bodyFontSize},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,${marginV},2`,
+	};
+}
+
+export function resolveExplanationBodyTiming(input: {
+	phrase: string;
+	explanation: string;
+	ttsDurationSeconds: number;
+	clipGapSeconds: number;
+}): { bodyStartOffsetSeconds: number; bodyDurationSeconds: number } {
+	const phraseLength = Math.max(input.phrase.trim().length, 0);
+	const explanationLength = Math.max(input.explanation.trim().length, 0);
+	const totalLength = phraseLength + explanationLength;
+
+	if (totalLength === 0 || input.ttsDurationSeconds <= 0) {
+		return {
+			bodyStartOffsetSeconds: input.clipGapSeconds,
+			bodyDurationSeconds: input.ttsDurationSeconds,
+		};
+	}
+
+	const phraseShare = phraseLength / totalLength;
+
+	return {
+		bodyStartOffsetSeconds:
+			input.clipGapSeconds + input.ttsDurationSeconds * phraseShare,
+		bodyDurationSeconds: input.ttsDurationSeconds * (1 - phraseShare),
+	};
+}
+
 export function buildExplanationCues(
 	explanation: string,
 	durationSeconds: number,
+	startOffsetSeconds = 0,
 ): AssCue[] {
 	const sentences = splitExplanationSentences(explanation);
 	if (sentences.length === 0) {
@@ -58,13 +103,14 @@ export function buildExplanationCues(
 		(sum, sentence) => sum + Math.max(sentence.length, 1),
 		0,
 	);
-	let cursor = 0;
+	let cursor = startOffsetSeconds;
+	const bodyEndSeconds = startOffsetSeconds + durationSeconds;
 
 	return sentences.map((sentence, index) => {
 		const weight = Math.max(sentence.length, 1);
 		const isLast = index === sentences.length - 1;
 		const segmentDuration = isLast
-			? durationSeconds - cursor
+			? bodyEndSeconds - cursor
 			: (weight / totalWeight) * durationSeconds;
 		const startSeconds = cursor;
 		const endSeconds = Math.max(
@@ -75,16 +121,23 @@ export function buildExplanationCues(
 
 		return {
 			startSeconds,
-			endSeconds: Math.min(endSeconds, durationSeconds),
+			endSeconds: Math.min(endSeconds, bodyEndSeconds),
 			text: sentence,
 		};
 	});
 }
 
 export function buildExplanationAss(input: ExplanationAssInput): string {
-	const { phrase, explanation, durationSeconds, width, height } = input;
-	const titleStyle = `Style: Title,DejaVu Sans,${Math.round(height * 0.06)},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,2,2,2,10,10,${Math.round(height * 0.18)},1`;
-	const bodyStyle = `Style: Body,DejaVu Sans,${Math.round(height * 0.04)},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,${Math.round(height * 0.08)},2`;
+	const {
+		phrase,
+		explanation,
+		durationSeconds,
+		bodyStartOffsetSeconds,
+		bodyDurationSeconds,
+		width,
+		height,
+	} = input;
+	const { titleStyle, bodyStyle } = buildAssStyles(height);
 	const header = [
 		"[Script Info]",
 		"ScriptType: v4.00+",
@@ -102,11 +155,27 @@ export function buildExplanationAss(input: ExplanationAssInput): string {
 	].join("\n");
 
 	const titleDialogue = `Dialogue: 0,${formatAssTimestamp(0)},${formatAssTimestamp(durationSeconds)},Title,,0,0,0,,${escapeAssText(phrase)}`;
-	const bodyCues = buildExplanationCues(explanation, durationSeconds);
+	const bodyCues = buildExplanationCues(
+		explanation,
+		bodyDurationSeconds,
+		bodyStartOffsetSeconds,
+	);
 	const bodyDialogues = bodyCues.map(
 		(cue) =>
 			`Dialogue: 0,${formatAssTimestamp(cue.startSeconds)},${formatAssTimestamp(cue.endSeconds)},Body,,0,0,0,,${escapeAssText(cue.text)}`,
 	);
 
 	return `${header}\n${titleDialogue}\n${bodyDialogues.join("\n")}\n`;
+}
+
+export function getAssStyleMetrics(height: number): {
+	titleFontSize: number;
+	bodyFontSize: number;
+	marginV: number;
+} {
+	return {
+		titleFontSize: Math.round(height * TITLE_FONT_SCALE),
+		bodyFontSize: Math.round(height * BODY_FONT_SCALE),
+		marginV: Math.round(height * VERTICAL_MARGIN_SCALE),
+	};
 }

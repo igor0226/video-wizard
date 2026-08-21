@@ -8,16 +8,16 @@ import {
 	ProcessingHistoryService,
 	type VideoRecord,
 } from "../storage";
-import { ExplanationClipService } from "./explanation-clip.service";
-import { FfmpegAudioService } from "./ffmpeg-audio.service";
-import { FfmpegComposeService } from "./ffmpeg-compose.service";
-import { FfmpegDashService } from "./ffmpeg-dash.service";
-import { PhraseDetectionService } from "./phrase-detection.service";
+import { FfmpegAudioService } from "./audio-extract/ffmpeg-audio.service";
+import { FfmpegComposeService } from "./composing-video/ffmpeg-compose.service";
+import { PhraseDetectionService } from "./detecting-phrases/phrase-detection.service";
+import { FfmpegDashService } from "./dash-encoding/ffmpeg-dash.service";
+import { ExplanationClipService } from "./generating-clips/explanation-clip.service";
 import {
 	executeProcessingStep,
 	skipProcessingStep,
 } from "./processing-step-runner";
-import { WhisperTranscriptionService } from "./transcription.service";
+import { WhisperTranscriptionService } from "./transcribing/transcription.service";
 
 type ExtractAudioResult = { audioRelativePath: string };
 type TranscriptResult = { transcriptRelativePath: string };

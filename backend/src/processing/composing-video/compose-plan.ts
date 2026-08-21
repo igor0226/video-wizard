@@ -1,4 +1,4 @@
-import type { ExplanationClipManifestEntry } from "./explanation-clip.service";
+import type { ExplanationClipManifestEntry } from "../generating-clips/explanation-clip.service";
 
 export type CompositionPart =
 	| {

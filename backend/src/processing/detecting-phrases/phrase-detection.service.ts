@@ -4,8 +4,9 @@ import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
-import { BlobStorageService, type VideoRecord } from "../storage";
-import type { WhisperTranscript } from "./merge-transcripts";
+import { BlobStorageService, type VideoRecord } from "../../storage";
+import type { WhisperTranscript } from "../shared/merge-transcripts";
+import { PHRASE_DETECTION_PROMPT } from "./prompt";
 
 const PHRASE_MODEL = "gpt-5.6-luna";
 
@@ -31,18 +32,6 @@ export type DetectPhrasesInput = {
 	video: VideoRecord;
 	transcriptRelativePath: string;
 };
-
-const SYSTEM_PROMPT = `You are helping build a language-learning video tool.
-
-Your task is to analyze a transcript and identify phrases that would be challenging for a learner at the given CEFR level. Look for:
-- Tricky idioms, collocations, and fixed expressions
-- Grammatically difficult constructions
-- Words or phrases whose meaning is hard to guess from surrounding context
-
-Skip items that are obvious or not hard for the learner's level. For each flagged phrase, write a brief explanation in the requested explanation language that helps the learner understand meaning and usage.
-Make sure that the explanations are not too frequent, otherwise the learner will get bored.
-
-Return word indexes (0-based, inclusive) that refer to the numbered word list provided. Only include phrases that appear in the transcript.`;
 
 @Injectable()
 export class PhraseDetectionService {
@@ -78,7 +67,7 @@ export class PhraseDetectionService {
 		const response = await client.responses.parse({
 			model: PHRASE_MODEL,
 			input: [
-				{ role: "system", content: SYSTEM_PROMPT },
+				{ role: "system", content: PHRASE_DETECTION_PROMPT },
 				{
 					role: "user",
 					content: [

@@ -5,15 +5,15 @@ import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 import OpenAI from "openai";
 
-import { BlobStorageService, type VideoRecord } from "../storage";
-import type { ExtractAudioResult } from "./ffmpeg-audio.service";
+import { BlobStorageService, type VideoRecord } from "../../storage";
+import type { ExtractAudioResult } from "../audio-extract/ffmpeg-audio.service";
 import {
 	normalizeFfmpegError,
 	runProcess,
 	runProcessWithOutput,
-} from "./ffmpeg-process";
-import { mergeWhisperTranscripts } from "./merge-transcripts";
-import type { WhisperTranscript } from "./merge-transcripts";
+} from "../shared/ffmpeg-process";
+import { mergeWhisperTranscripts } from "../shared/merge-transcripts";
+import type { WhisperTranscript } from "../shared/merge-transcripts";
 
 const WHISPER_MAX_BYTES = 24 * 1024 * 1024;
 const CHUNK_DURATION_SECONDS = 600;

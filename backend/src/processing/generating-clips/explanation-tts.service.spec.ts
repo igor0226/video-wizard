@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BlobStorageService } from "../storage";
-import { ExplanationTtsService } from "./explanation-tts.service";
+import { BlobStorageService } from "../../storage";
+import {
+	buildExplanationSpeechText,
+	ExplanationTtsService,
+} from "./explanation-tts.service";
 
 const speechCreate = vi.fn();
 
@@ -15,9 +18,29 @@ vi.mock("openai", () => ({
 	})),
 }));
 
-vi.mock("./ffmpeg-probe", () => ({
+vi.mock("../shared/ffmpeg-probe", () => ({
 	probeAudioDurationSeconds: vi.fn(async () => 4.2),
 }));
+
+describe("buildExplanationSpeechText", () => {
+	it("joins phrase and explanation with a period", () => {
+		expect(
+			buildExplanationSpeechText({
+				phrase: "icebreaker",
+				explanation: "An icebreaker helps people relax.",
+			}),
+		).toBe("icebreaker. An icebreaker helps people relax.");
+	});
+
+	it("does not add a period when the phrase already ends with punctuation", () => {
+		expect(
+			buildExplanationSpeechText({
+				phrase: "icebreaker!",
+				explanation: "An icebreaker helps people relax.",
+			}),
+		).toBe("icebreaker! An icebreaker helps people relax.");
+	});
+});
 
 describe("ExplanationTtsService", () => {
 	let service: ExplanationTtsService;
@@ -42,10 +65,10 @@ describe("ExplanationTtsService", () => {
 	});
 
 	it("writes mp3 output via blob storage and returns duration", async () => {
-		const outputRelativePath =
-			"explanations/video-1/clips/000.mp3";
+		const outputRelativePath = "explanations/video-1/clips/000.mp3";
 
 		const result = await service.synthesizeSpeech({
+			phrase: "icebreaker",
 			explanation: "An icebreaker helps people relax.",
 			explanationLanguage: "English",
 			outputRelativePath,
@@ -60,7 +83,7 @@ describe("ExplanationTtsService", () => {
 			expect.objectContaining({
 				model: "gpt-4o-mini-tts",
 				voice: "coral",
-				input: "An icebreaker helps people relax.",
+				input: "icebreaker. An icebreaker helps people relax.",
 			}),
 		);
 	});
@@ -70,6 +93,7 @@ describe("ExplanationTtsService", () => {
 
 		await expect(
 			service.synthesizeSpeech({
+				phrase: "Test",
 				explanation: "Test",
 				explanationLanguage: "English",
 				outputRelativePath: "explanations/video-1/clips/000.mp3",

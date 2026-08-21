@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BlobStorageService } from "../storage";
-import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
+import { BlobStorageService } from "../../storage";
+import { makeTestVideoRecord } from "../../../test/helpers/make-test-video-record";
 import { FfmpegAudioService } from "./ffmpeg-audio.service";
-import * as ffmpegProcess from "./ffmpeg-process";
+import * as ffmpegProcess from "../shared/ffmpeg-process";
 
-vi.mock("./ffmpeg-process", () => ({
+vi.mock("../shared/ffmpeg-process", () => ({
 	runProcess: vi.fn(),
 	normalizeFfmpegError: vi.fn((error: unknown) =>
 		error instanceof Error ? error : new Error("ffmpeg failed"),
