@@ -4,6 +4,7 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 
+import type { PlaybackPhrase } from "../processing/composing-video/compose-plan";
 import {
 	BlobStorageService,
 	ProcessingHistoryService,
@@ -15,6 +16,10 @@ import {
 	type VideoRecord,
 } from "../storage";
 import { getQueuePosition } from "./queue-position";
+
+type PlaybackPhrasesFile = {
+	phrases: PlaybackPhrase[];
+};
 
 export type VideoListItem = {
 	id: string;
@@ -54,6 +59,11 @@ export type VideoRetryForApi = {
 	failureReason: null;
 };
 
+export type PlaybackPhrasesForApi = {
+	videoId: string;
+	phrases: PlaybackPhrase[];
+};
+
 @Injectable()
 export class VideosService {
 	constructor(
@@ -84,6 +94,27 @@ export class VideosService {
 			explanationLanguage: video.explanationLanguage,
 			languageLevel: video.languageLevel,
 		}));
+	}
+
+	async getPlaybackPhrasesForApi(
+		videoId: string,
+	): Promise<PlaybackPhrasesForApi> {
+		await this.getVideoRecordById(videoId);
+
+		const playbackPhrasesRelativePath =
+			this.blobStorage.getPlaybackPhrasesRelativePath(videoId);
+		if (!(await this.blobStorage.fileExists(playbackPhrasesRelativePath))) {
+			return { videoId, phrases: [] };
+		}
+
+		const playbackPhrasesFile = JSON.parse(
+			await this.blobStorage.readText(playbackPhrasesRelativePath),
+		) as PlaybackPhrasesFile;
+
+		return {
+			videoId,
+			phrases: playbackPhrasesFile.phrases,
+		};
 	}
 
 	async getVideoStatusForApi(videoId: string): Promise<VideoStatusForApi> {

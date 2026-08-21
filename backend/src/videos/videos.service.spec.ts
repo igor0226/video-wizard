@@ -37,6 +37,11 @@ describe("VideosService", () => {
 	};
 	const blobStorage = {
 		clearProcessingArtifactsFromStep: vi.fn(async () => undefined),
+		getPlaybackPhrasesRelativePath: vi.fn(
+			(videoId: string) => `enriched/${videoId}/playback-phrases.json`,
+		),
+		fileExists: vi.fn(async () => false),
+		readText: vi.fn(async () => '{"phrases":[]}'),
 	};
 
 	beforeEach(() => {
@@ -88,5 +93,51 @@ describe("VideosService", () => {
 		await expect(service.retryFailedVideo("video-1")).rejects.toBeInstanceOf(
 			ConflictException,
 		);
+	});
+
+	it("getPlaybackPhrasesForApi returns empty phrases when file is missing", async () => {
+		const result = await service.getPlaybackPhrasesForApi("video-1");
+
+		expect(result).toEqual({ videoId: "video-1", phrases: [] });
+	});
+
+	it("getPlaybackPhrasesForApi returns stored playback phrases", async () => {
+		blobStorage.fileExists.mockResolvedValueOnce(true);
+		blobStorage.readText.mockResolvedValueOnce(
+			JSON.stringify({
+				phrases: [
+					{
+						index: 0,
+						phrase: "break the ice",
+						explanation: "Start a conversation.",
+						startSeconds: 10,
+						endSeconds: 13,
+					},
+				],
+			}),
+		);
+
+		const result = await service.getPlaybackPhrasesForApi("video-1");
+
+		expect(result).toEqual({
+			videoId: "video-1",
+			phrases: [
+				{
+					index: 0,
+					phrase: "break the ice",
+					explanation: "Start a conversation.",
+					startSeconds: 10,
+					endSeconds: 13,
+				},
+			],
+		});
+	});
+
+	it("getPlaybackPhrasesForApi throws NotFoundException for missing video", async () => {
+		videoRepository.getVideoById.mockResolvedValueOnce(null);
+
+		await expect(
+			service.getPlaybackPhrasesForApi("missing"),
+		).rejects.toBeInstanceOf(NotFoundException);
 	});
 });
