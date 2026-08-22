@@ -4,6 +4,27 @@ import {
 } from "../shared/ffmpeg-loudness";
 
 export const CLIP_GAP_SECONDS = 0.5;
+export const CLOSING_GAP_SECONDS = 0.3;
+
+export function buildConcatAudioArgs(input: {
+	speechAudioAbsolutePath: string;
+	closingAudioAbsolutePath: string;
+	midGapSeconds: number;
+	outputAbsolutePath: string;
+}): string[] {
+	return [
+		"-y",
+		"-i",
+		input.speechAudioAbsolutePath,
+		"-i",
+		input.closingAudioAbsolutePath,
+		"-filter_complex",
+		`[0:a]apad=pad_dur=${input.midGapSeconds}[a0];[a0][1:a]concat=n=2:v=0:a=1[a]`,
+		"-map",
+		"[a]",
+		input.outputAbsolutePath,
+	];
+}
 
 export function computeClipDurationSeconds(ttsDurationSeconds: number): number {
 	return ttsDurationSeconds + 2 * CLIP_GAP_SECONDS;

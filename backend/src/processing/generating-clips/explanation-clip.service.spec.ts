@@ -101,6 +101,10 @@ describe("ExplanationClipService", () => {
 		} as unknown as BlobStorageService;
 		explanationTtsService = {
 			synthesizeSpeech: vi.fn(async () => ({ durationSeconds: 3 })),
+			resolveClosingAudio: vi.fn(async () => ({
+				absolutePath: "/tmp/assets/listen-again/english.mp3",
+				durationSeconds: 1.2,
+			})),
 		} as unknown as ExplanationTtsService;
 		service = new ExplanationClipService(
 			{ info: vi.fn() } as never,
@@ -167,15 +171,19 @@ describe("ExplanationClipService", () => {
 						phrase: "Hello world",
 						insertAtSeconds: 0.8,
 						sentenceStartSeconds: 0,
-						durationSeconds: 4,
+						durationSeconds: 5.5,
 					}),
 				],
 			},
 		);
 		expect(explanationTtsService.synthesizeSpeech).toHaveBeenCalledWith(
 			expect.objectContaining({
-				explanation: "A greeting. Let's listen once again!",
+				explanation: "A greeting.",
+				outputRelativePath: "explanations/video-1/clips/000.speech.mp3",
 			}),
+		);
+		expect(explanationTtsService.resolveClosingAudio).toHaveBeenCalledWith(
+			"English",
 		);
 		expect(probeLoudnormStats).toHaveBeenCalledTimes(2);
 		expect(probeLoudnormStats).toHaveBeenCalledWith(
@@ -184,7 +192,10 @@ describe("ExplanationClipService", () => {
 		expect(probeLoudnormStats).toHaveBeenCalledWith(
 			"/tmp/explanations/video-1/clips/000.mp3",
 		);
-		const ffmpegArgs = vi.mocked(runProcess).mock.calls[0]?.[1] ?? [];
+		expect(vi.mocked(runProcess).mock.calls).toHaveLength(2);
+		const concatArgs = vi.mocked(runProcess).mock.calls[0]?.[1] ?? [];
+		expect(concatArgs.join(" ")).toContain("concat=n=2:v=0:a=1");
+		const ffmpegArgs = vi.mocked(runProcess).mock.calls[1]?.[1] ?? [];
 		const filterIndex = ffmpegArgs.indexOf("-filter:a");
 		const audioFilter = ffmpegArgs[filterIndex + 1];
 

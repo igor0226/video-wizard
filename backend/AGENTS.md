@@ -37,7 +37,8 @@ Nest.js app under `src/` with feature modules:
 - `videos/transcripts/<videoId>/transcript.json` — Whisper verbose JSON (word timestamps)
 - `videos/explanations/<videoId>/phrases.json` — detected tricky phrases with word indexes and explanations
 - `videos/explanations/<videoId>/clips.json` — manifest of rendered explanation clips (`insertAtSeconds`, `sentenceStartSeconds`, duration, paths)
-- `videos/explanations/<videoId>/clips/<nnn>.mp3|ass|mp4` — per-phrase TTS audio, ASS subtitles, and rendered clip
+- `videos/explanations/<videoId>/clips/<nnn>.speech.mp3|mp3|ass|mp4` — per-phrase speech TTS, combined audio (speech + cached closing), ASS subtitles, and rendered clip
+- `videos/assets/listen-again/<language>.mp3` — cached per-language "Let's listen once again!" TTS (recorded once, reused across videos)
 - `videos/enriched/<videoId>/output.mp4` — composed destination video (source + spliced explanation clips)
 - `videos/records/<videoId>.json` — includes `sourceLanguage`, `explanationLanguage`, `languageLevel`
 - `videos/history/<videoId>.json` — processing step history (events + current step)
@@ -50,8 +51,8 @@ Worker order for each pending video: **audio extract → Whisper transcribe → 
 - `FfmpegAudioService` — extracts mono 16 kHz MP3 (`audio/<videoId>/track.mp3`); fails if no audio track
 - `WhisperTranscriptionService` — OpenAI `whisper-1` with `verbose_json` + word timestamps; writes `transcripts/<videoId>/transcript.json`
 - `PhraseDetectionService` — OpenAI `gpt-5.6-luna` with structured JSON output; writes `explanations/<videoId>/phrases.json`
-- `ExplanationTtsService` — OpenAI `gpt-4o-mini-tts` for explanation narration audio
-- `ExplanationClipService` — FFmpeg slide clips with burned-in phrase title + explanation subtitles; appends a localized "Let's listen once again!" line (spoken + shown) at the end of each clip (`explanations/<videoId>/clips/`)
+- `ExplanationTtsService` — OpenAI `gpt-4o-mini-tts` for explanation narration audio; lazily caches per-language closing audio under `assets/listen-again/<language>.mp3`
+- `ExplanationClipService` — FFmpeg slide clips with burned-in phrase title + explanation subtitles; concatenates cached localized "Let's listen once again!" audio (spoken + shown) after each clip's explanation (`explanations/<videoId>/clips/`)
 - `FfmpegComposeService` — splices explanation clips after the sentence containing each phrase, fades source audio out over 700ms before each clip, then resumes playback from `sentenceStartSeconds` so the target sentence replays after the explanation; writes `enriched/<videoId>/output.mp4`
 - `FfmpegDashService` — DASH packaging from the enriched video
 - Files > 24 MB are split into ~10-minute chunks before transcription and merged with offset word timestamps
@@ -114,6 +115,7 @@ These are stored on the video record and passed into the phrase-detection prompt
 
 From `backend/`:
 
+- **Hard rule:** Never write or read files from the disk in a way around the BlobStorageService. The only exception is tests.
 - **Hard rule:** if you see that the changes suggested by the user may require changing the frontend files as well, never change them without asking for the user's permission.
 - **Hard rule:** functions should not receive more than 2 parameters. If the function's logic requires so, pass the paramaters grouped in an object.
 - **Hard rule:** before commit, `npm run lint:fix`

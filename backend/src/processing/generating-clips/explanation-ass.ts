@@ -7,6 +7,7 @@ export type ExplanationAssInput = {
 	bodyDurationSeconds: number;
 	width: number;
 	height: number;
+	closingCue?: AssCue;
 };
 
 export type AssCue = {
@@ -60,6 +61,21 @@ function buildAssStyles(height: number): { titleStyle: string; bodyStyle: string
 	return {
 		titleStyle: `Style: Title,DejaVu Sans,${titleFontSize},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,2,2,8,10,10,${marginV},1`,
 		bodyStyle: `Style: Body,DejaVu Sans,${bodyFontSize},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,${marginV},2`,
+	};
+}
+
+export function resolveClosingCueTiming(input: {
+	clipGapSeconds: number;
+	closingGapSeconds: number;
+	speechDurationSeconds: number;
+	closingDurationSeconds: number;
+}): { startSeconds: number; durationSeconds: number } {
+	return {
+		startSeconds:
+			input.clipGapSeconds +
+			input.speechDurationSeconds +
+			input.closingGapSeconds,
+		durationSeconds: input.closingDurationSeconds,
 	};
 }
 
@@ -136,6 +152,7 @@ export function buildExplanationAss(input: ExplanationAssInput): string {
 		bodyDurationSeconds,
 		width,
 		height,
+		closingCue,
 	} = input;
 	const { titleStyle, bodyStyle } = buildAssStyles(height);
 	const header = [
@@ -164,8 +181,11 @@ export function buildExplanationAss(input: ExplanationAssInput): string {
 		(cue) =>
 			`Dialogue: 0,${formatAssTimestamp(cue.startSeconds)},${formatAssTimestamp(cue.endSeconds)},Body,,0,0,0,,${escapeAssText(cue.text)}`,
 	);
+	const closingDialogue = closingCue
+		? `Dialogue: 0,${formatAssTimestamp(closingCue.startSeconds)},${formatAssTimestamp(closingCue.endSeconds)},Body,,0,0,0,,${escapeAssText(closingCue.text)}`
+		: null;
 
-	return `${header}\n${titleDialogue}\n${bodyDialogues.join("\n")}\n`;
+	return `${header}\n${titleDialogue}\n${[...bodyDialogues, closingDialogue].filter(Boolean).join("\n")}\n`;
 }
 
 export function getAssStyleMetrics(height: number): {

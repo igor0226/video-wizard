@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
 	buildClipAudioFilter,
 	buildClipRenderArgs,
+	buildConcatAudioArgs,
+	CLOSING_GAP_SECONDS,
 	computeClipDurationSeconds,
 } from "./explanation-clip-render";
 
@@ -33,6 +35,23 @@ describe("buildClipAudioFilter", () => {
 		expect(filter).toContain("linear=true");
 		expect(filter).toContain("adelay=500|500,apad=pad_dur=0.5");
 		expect(filter.indexOf("loudnorm=")).toBeLessThan(filter.indexOf("adelay="));
+	});
+});
+
+describe("buildConcatAudioArgs", () => {
+	it("pads speech audio and concatenates closing audio", () => {
+		const args = buildConcatAudioArgs({
+			speechAudioAbsolutePath: "/tmp/speech.mp3",
+			closingAudioAbsolutePath: "/tmp/closing.mp3",
+			midGapSeconds: CLOSING_GAP_SECONDS,
+			outputAbsolutePath: "/tmp/combined.mp3",
+		});
+
+		expect(args).toContain("-filter_complex");
+		expect(args.join(" ")).toContain(
+			`[0:a]apad=pad_dur=${CLOSING_GAP_SECONDS}[a0];[a0][1:a]concat=n=2:v=0:a=1[a]`,
+		);
+		expect(args).toContain("/tmp/combined.mp3");
 	});
 });
 

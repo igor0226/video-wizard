@@ -6,6 +6,7 @@ import OpenAI from "openai";
 
 import { BlobStorageService } from "../../storage";
 import { probeAudioDurationSeconds } from "../shared/ffmpeg-probe";
+import { getListenAgainPhrase, normalizeExplanationLanguage } from "./listen-again";
 
 const TTS_MODEL = "gpt-4o-mini-tts";
 const TTS_VOICE = "coral";
@@ -87,6 +88,38 @@ export class ExplanationTtsService {
 		return { durationSeconds };
 	}
 
+	async resolveClosingAudio(
+		explanationLanguage: string,
+	): Promise<{ absolutePath: string; durationSeconds: number }> {
+		const normalizedLanguage =
+			normalizeExplanationLanguage(explanationLanguage);
+		const assetRelativePath =
+			this.blobStorage.getListenAgainAssetRelativePath(normalizedLanguage);
+		const assetAbsolutePath =
+			this.blobStorage.resolveRelativePath(assetRelativePath);
+
+		if (!(await this.blobStorage.fileExists(assetRelativePath))) {
+			this.logger.info(
+				{ language: normalizedLanguage, output: assetRelativePath },
+				"explanation-tts-closing-cache-miss",
+			);
+			await this.synthesizeSpeech({
+				phrase: "",
+				explanation: getListenAgainPhrase(explanationLanguage),
+				explanationLanguage,
+				outputRelativePath: assetRelativePath,
+			});
+		} else {
+			this.logger.info(
+				{ language: normalizedLanguage, output: assetRelativePath },
+				"explanation-tts-closing-cache-hit",
+			);
+		}
+
+		const durationSeconds = await probeAudioDurationSeconds(assetAbsolutePath);
+		return { absolutePath: assetAbsolutePath, durationSeconds };
+	}
+
 	private getOpenAiClient(apiKey: string): OpenAI {
 		if (!this.openaiClient) {
 			this.openaiClient = new OpenAI({ apiKey });
@@ -97,6 +130,18 @@ export class ExplanationTtsService {
 
 export function formatClipIndex(index: number): string {
 	return String(index).padStart(3, "0");
+}
+
+export function getClipSpeechAudioRelativePath(
+	videoId: string,
+	index: number,
+): string {
+	return path.posix.join(
+		"explanations",
+		videoId,
+		"clips",
+		`${formatClipIndex(index)}.speech.mp3`,
+	);
 }
 
 export function getClipAudioRelativePath(
