@@ -66,6 +66,12 @@ export class BlobStorageService {
 		return readFile(absolutePath, "utf8");
 	}
 
+	async writeText(relativePath: string, contents: string): Promise<void> {
+		const absolutePath = this.resolveRelativePath(relativePath);
+		await ensureDir(path.dirname(absolutePath));
+		await writeFile(absolutePath, contents, "utf8");
+	}
+
 	async readBytes(relativePath: string): Promise<Buffer> {
 		const absolutePath = this.resolveRelativePath(relativePath);
 		return readFile(absolutePath);

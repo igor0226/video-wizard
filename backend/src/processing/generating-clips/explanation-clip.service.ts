@@ -1,4 +1,3 @@
-import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { Injectable } from "@nestjs/common";
@@ -10,6 +9,7 @@ import {
 	resolveClosingCueTiming,
 	resolveExplanationBodyTiming,
 } from "./explanation-ass";
+import { resolveClipGenerationConcurrency } from "./clip-generation-concurrency";
 import {
 	buildClipRenderArgs,
 	buildConcatAudioArgs,
@@ -37,6 +37,7 @@ import {
 	resolveTargetIntegratedLufs,
 } from "../shared/ffmpeg-loudness";
 import { normalizeFfmpegError, runProcess } from "../shared/ffmpeg-process";
+import { mapWithConcurrency } from "../shared/map-with-concurrency";
 import type { DetectedPhrase } from "../detecting-phrases/phrase-detection.service";
 
 export type ExplanationClipManifestEntry = {
@@ -75,6 +76,11 @@ type CombinedClipAudio = {
 	ttsDurationSeconds: number;
 };
 
+type ClosingAudio = {
+	absolutePath: string;
+	durationSeconds: number;
+};
+
 @Injectable()
 export class ExplanationClipService {
 	constructor(
@@ -103,6 +109,18 @@ export class ExplanationClipService {
 			phrasesFile.phrases,
 			transcript,
 		);
+		const clipsManifestRelativePath =
+			this.blobStorage.getClipsManifestRelativePath(video.id);
+
+		if (insertPoints.length === 0) {
+			await this.blobStorage.writeJson(clipsManifestRelativePath, { clips: [] });
+			this.logger.info(
+				{ videoId: video.id, clipCount: 0 },
+				"explanation-clips-success",
+			);
+			return { clipsManifestRelativePath };
+		}
+
 		const sourceAbsolutePath =
 			this.blobStorage.getStoragePathsForVideo(video).sourceAbsolutePath;
 		const probe = await probeVideoFile(sourceAbsolutePath);
@@ -110,20 +128,34 @@ export class ExplanationClipService {
 			sourceAbsolutePath,
 			videoId: video.id,
 		});
+		const closingAudio = await this.explanationTtsService.resolveClosingAudio(
+			video.explanationLanguage,
+		);
+		const concurrency = resolveClipGenerationConcurrency();
 
-		const clips: ExplanationClipManifestEntry[] = [];
-		for (const insertPoint of insertPoints) {
-			const clip = await this.renderClip({
-				video,
-				insertPoint,
-				probe,
-				targetIntegratedLufs,
-			});
-			clips.push(clip);
-		}
+		this.logger.info(
+			{
+				videoId: video.id,
+				clipCount: insertPoints.length,
+				concurrency,
+			},
+			"explanation-clips-start",
+		);
 
-		const clipsManifestRelativePath =
-			this.blobStorage.getClipsManifestRelativePath(video.id);
+		const clips = await mapWithConcurrency({
+			items: insertPoints,
+			concurrency,
+			mapper: (insertPoint) =>
+				this.renderClip({
+					video,
+					insertPoint,
+					probe,
+					targetIntegratedLufs,
+					closingAudio,
+				}),
+		});
+		clips.sort((left, right) => left.index - right.index);
+
 		await this.blobStorage.writeJson(clipsManifestRelativePath, { clips });
 
 		this.logger.info(
@@ -164,8 +196,10 @@ export class ExplanationClipService {
 		insertPoint: PhraseInsertPoint;
 		probe: ClipProbe;
 		targetIntegratedLufs: number;
+		closingAudio: ClosingAudio;
 	}): Promise<ExplanationClipManifestEntry> {
-		const { video, insertPoint, probe, targetIntegratedLufs } = input;
+		const { video, insertPoint, probe, targetIntegratedLufs, closingAudio } =
+			input;
 		const { index, phrase, insertAtSeconds, sentenceStartSeconds } = insertPoint;
 		const paths = this.resolveClipPaths({ videoId: video.id, index });
 		const combinedAudio = await this.buildCombinedClipAudio({
@@ -173,6 +207,7 @@ export class ExplanationClipService {
 			index,
 			phrase,
 			audioAbsolutePath: paths.audioAbsolutePath,
+			closingAudio,
 		});
 		const durationSeconds = computeClipDurationSeconds(
 			combinedAudio.ttsDurationSeconds,
@@ -185,7 +220,7 @@ export class ExplanationClipService {
 			closingDurationSeconds: combinedAudio.closingDurationSeconds,
 			probe,
 		});
-		await writeFile(paths.assAbsolutePath, assContent, "utf8");
+		await this.blobStorage.writeText(paths.assRelativePath, assContent);
 		await this.renderClipVideo({
 			videoId: video.id,
 			index,
@@ -210,6 +245,7 @@ export class ExplanationClipService {
 	private resolveClipPaths(input: { videoId: string; index: number }): {
 		audioRelativePath: string;
 		audioAbsolutePath: string;
+		assRelativePath: string;
 		assAbsolutePath: string;
 		videoRelativePath: string;
 		videoAbsolutePath: string;
@@ -227,6 +263,7 @@ export class ExplanationClipService {
 		return {
 			audioRelativePath,
 			audioAbsolutePath: this.blobStorage.resolveRelativePath(audioRelativePath),
+			assRelativePath,
 			assAbsolutePath: this.blobStorage.resolveRelativePath(assRelativePath),
 			videoRelativePath,
 			videoAbsolutePath: this.blobStorage.resolveRelativePath(videoRelativePath),
@@ -238,6 +275,7 @@ export class ExplanationClipService {
 		index: number;
 		phrase: DetectedPhrase;
 		audioAbsolutePath: string;
+		closingAudio: ClosingAudio;
 	}): Promise<CombinedClipAudio> {
 		const speechRelativePath = getClipSpeechAudioRelativePath(
 			input.video.id,
@@ -250,9 +288,6 @@ export class ExplanationClipService {
 				explanationLanguage: input.video.explanationLanguage,
 				outputRelativePath: speechRelativePath,
 			});
-		const closingAudio = await this.explanationTtsService.resolveClosingAudio(
-			input.video.explanationLanguage,
-		);
 		const speechAbsolutePath =
 			this.blobStorage.resolveRelativePath(speechRelativePath);
 
@@ -261,7 +296,7 @@ export class ExplanationClipService {
 				"ffmpeg",
 				buildConcatAudioArgs({
 					speechAudioAbsolutePath: speechAbsolutePath,
-					closingAudioAbsolutePath: closingAudio.absolutePath,
+					closingAudioAbsolutePath: input.closingAudio.absolutePath,
 					midGapSeconds: CLOSING_GAP_SECONDS,
 					outputAbsolutePath: input.audioAbsolutePath,
 				}),
@@ -273,12 +308,12 @@ export class ExplanationClipService {
 		const ttsDurationSeconds =
 			speechDurationSeconds +
 			CLOSING_GAP_SECONDS +
-			closingAudio.durationSeconds;
+			input.closingAudio.durationSeconds;
 
 		return {
 			audioAbsolutePath: input.audioAbsolutePath,
 			speechDurationSeconds,
-			closingDurationSeconds: closingAudio.durationSeconds,
+			closingDurationSeconds: input.closingAudio.durationSeconds,
 			ttsDurationSeconds,
 		};
 	}

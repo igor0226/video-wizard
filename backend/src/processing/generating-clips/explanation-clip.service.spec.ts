@@ -7,10 +7,6 @@ import { ExplanationTtsService } from "./explanation-tts.service";
 import { runProcess } from "../shared/ffmpeg-process";
 import { probeLoudnormStats } from "../shared/ffmpeg-loudness";
 
-vi.mock("node:fs/promises", () => ({
-	writeFile: vi.fn(async () => undefined),
-}));
-
 vi.mock("../shared/ffmpeg-probe", () => ({
 	probeVideoFile: vi.fn(async () => ({
 		width: 1280,
@@ -53,6 +49,18 @@ const TTS_LOUDNESS = {
 	target_offset: 12.5,
 };
 
+const MULTI_PHRASE_TRANSCRIPT = {
+	language: "english",
+	duration: 20,
+	text: "Hello world. Good morning.",
+	words: [
+		{ word: "Hello", start: 0, end: 0.4 },
+		{ word: "world.", start: 0.4, end: 0.8 },
+		{ word: "Good", start: 5, end: 5.3 },
+		{ word: "morning.", start: 5.3, end: 5.7 },
+	],
+};
+
 describe("ExplanationClipService", () => {
 	const video = makeTestVideoRecord();
 
@@ -62,6 +70,7 @@ describe("ExplanationClipService", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		delete process.env.CLIP_GENERATION_CONCURRENCY;
 		vi.mocked(probeLoudnormStats).mockImplementation(async (absolutePath) => {
 			if (absolutePath.includes("/uploads/")) {
 				return SOURCE_LOUDNESS;
@@ -82,14 +91,10 @@ describe("ExplanationClipService", () => {
 				if (relativePath.endsWith("phrases.json")) {
 					return JSON.stringify({ phrases: [] });
 				}
-				return JSON.stringify({
-					language: "english",
-					duration: 10,
-					text: "Hello world.",
-					words: [{ word: "Hello", start: 0, end: 0.4 }],
-				});
+				return JSON.stringify(MULTI_PHRASE_TRANSCRIPT);
 			}),
 			writeJson: vi.fn(async () => undefined),
+			writeText: vi.fn(async () => undefined),
 			getStoragePathsForVideo: vi.fn(() => ({
 				sourceAbsolutePath: "/tmp/uploads/video-1/source.mp4",
 				dashAbsolutePath: "/tmp/dash/video-1",
@@ -128,6 +133,7 @@ describe("ExplanationClipService", () => {
 			{ clips: [] },
 		);
 		expect(explanationTtsService.synthesizeSpeech).not.toHaveBeenCalled();
+		expect(explanationTtsService.resolveClosingAudio).not.toHaveBeenCalled();
 	});
 
 	it("renders clips with loudness matched to the source video", async () => {
@@ -146,15 +152,7 @@ describe("ExplanationClipService", () => {
 				});
 			}
 
-			return JSON.stringify({
-				language: "english",
-				duration: 10,
-				text: "Hello world.",
-				words: [
-					{ word: "Hello", start: 0, end: 0.4 },
-					{ word: "world.", start: 0.4, end: 0.8 },
-				],
-			});
+			return JSON.stringify(MULTI_PHRASE_TRANSCRIPT);
 		});
 
 		await service.generateClips({
@@ -176,12 +174,17 @@ describe("ExplanationClipService", () => {
 				],
 			},
 		);
+		expect(blobStorage.writeText).toHaveBeenCalledWith(
+			"explanations/video-1/clips/000.ass",
+			expect.stringContaining("Hello world"),
+		);
 		expect(explanationTtsService.synthesizeSpeech).toHaveBeenCalledWith(
 			expect.objectContaining({
 				explanation: "A greeting.",
 				outputRelativePath: "explanations/video-1/clips/000.speech.mp3",
 			}),
 		);
+		expect(explanationTtsService.resolveClosingAudio).toHaveBeenCalledTimes(1);
 		expect(explanationTtsService.resolveClosingAudio).toHaveBeenCalledWith(
 			"English",
 		);
@@ -202,5 +205,58 @@ describe("ExplanationClipService", () => {
 		expect(audioFilter).toContain("loudnorm=I=-18.2");
 		expect(audioFilter).toContain("adelay=500|500,apad=pad_dur=0.5");
 		expect(ffmpegArgs.includes("-shortest")).toBe(false);
+	});
+
+	it("renders multiple clips in parallel and writes a sorted manifest", async () => {
+		vi.mocked(blobStorage.readText).mockImplementation(async (relativePath) => {
+			if (relativePath.endsWith("phrases.json")) {
+				return JSON.stringify({
+					phrases: [
+						{
+							phrase: "Hello world",
+							startWordIndex: 0,
+							endWordIndex: 1,
+							explanation: "A greeting.",
+							difficulty: "easy",
+						},
+						{
+							phrase: "Good morning",
+							startWordIndex: 2,
+							endWordIndex: 3,
+							explanation: "A morning greeting.",
+							difficulty: "easy",
+						},
+					],
+				});
+			}
+
+			return JSON.stringify(MULTI_PHRASE_TRANSCRIPT);
+		});
+
+		await service.generateClips({
+			video,
+			phrasesRelativePath: "explanations/video-1/phrases.json",
+			transcriptRelativePath: "transcripts/video-1/transcript.json",
+		});
+
+		expect(explanationTtsService.resolveClosingAudio).toHaveBeenCalledTimes(1);
+		expect(explanationTtsService.synthesizeSpeech).toHaveBeenCalledTimes(2);
+		expect(blobStorage.writeText).toHaveBeenCalledWith(
+			"explanations/video-1/clips/000.ass",
+			expect.any(String),
+		);
+		expect(blobStorage.writeText).toHaveBeenCalledWith(
+			"explanations/video-1/clips/001.ass",
+			expect.any(String),
+		);
+		expect(blobStorage.writeJson).toHaveBeenCalledWith(
+			"explanations/video-1/clips.json",
+			{
+				clips: [
+					expect.objectContaining({ index: 0, phrase: "Hello world" }),
+					expect.objectContaining({ index: 1, phrase: "Good morning" }),
+				],
+			},
+		);
 	});
 });
