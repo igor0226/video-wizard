@@ -6,7 +6,10 @@ import OpenAI from "openai";
 
 import { BlobStorageService } from "../../storage";
 import { probeAudioDurationSeconds } from "../shared/ffmpeg-probe";
-import { getListenAgainPhrase, normalizeExplanationLanguage } from "./listen-again";
+import {
+	getListenAgainPhrase,
+	normalizeExplanationLanguage,
+} from "./listen-again";
 
 const TTS_MODEL = "gpt-4o-mini-tts";
 const TTS_VOICE = "coral";
@@ -78,8 +81,7 @@ export class ExplanationTtsService {
 		const outputAbsolutePath = this.blobStorage.resolveRelativePath(
 			input.outputRelativePath,
 		);
-		const durationSeconds =
-			await probeAudioDurationSeconds(outputAbsolutePath);
+		const durationSeconds = await probeAudioDurationSeconds(outputAbsolutePath);
 		this.logger.info(
 			{ output: input.outputRelativePath, durationSeconds },
 			"explanation-tts-success",

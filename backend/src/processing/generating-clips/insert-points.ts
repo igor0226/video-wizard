@@ -78,10 +78,7 @@ function findSentenceStartByWords(
 		const current = words[index];
 		const previous = words[index - 1];
 
-		if (
-			previous &&
-			current.start - previous.end > WORD_GAP_SECONDS
-		) {
+		if (previous && current.start - previous.end > WORD_GAP_SECONDS) {
 			return current.start;
 		}
 

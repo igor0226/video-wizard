@@ -37,15 +37,15 @@ describe("parseLoudnormStats", () => {
 
 describe("resolveTargetIntegratedLufs", () => {
 	it("clamps source integrated loudness to ffmpeg loudnorm range", () => {
-		expect(resolveTargetIntegratedLufs({ ...SAMPLE_STATS, input_i: -18.2 })).toBe(
-			-18.2,
-		);
+		expect(
+			resolveTargetIntegratedLufs({ ...SAMPLE_STATS, input_i: -18.2 }),
+		).toBe(-18.2);
 		expect(resolveTargetIntegratedLufs({ ...SAMPLE_STATS, input_i: -2 })).toBe(
 			-5,
 		);
-		expect(
-			resolveTargetIntegratedLufs({ ...SAMPLE_STATS, input_i: -80 }),
-		).toBe(-70);
+		expect(resolveTargetIntegratedLufs({ ...SAMPLE_STATS, input_i: -80 })).toBe(
+			-70,
+		);
 	});
 });
 

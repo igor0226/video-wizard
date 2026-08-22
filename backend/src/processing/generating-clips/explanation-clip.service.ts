@@ -113,7 +113,9 @@ export class ExplanationClipService {
 			this.blobStorage.getClipsManifestRelativePath(video.id);
 
 		if (insertPoints.length === 0) {
-			await this.blobStorage.writeJson(clipsManifestRelativePath, { clips: [] });
+			await this.blobStorage.writeJson(clipsManifestRelativePath, {
+				clips: [],
+			});
 			this.logger.info(
 				{ videoId: video.id, clipCount: 0 },
 				"explanation-clips-success",
@@ -200,7 +202,8 @@ export class ExplanationClipService {
 	}): Promise<ExplanationClipManifestEntry> {
 		const { video, insertPoint, probe, targetIntegratedLufs, closingAudio } =
 			input;
-		const { index, phrase, insertAtSeconds, sentenceStartSeconds } = insertPoint;
+		const { index, phrase, insertAtSeconds, sentenceStartSeconds } =
+			insertPoint;
 		const paths = this.resolveClipPaths({ videoId: video.id, index });
 		const combinedAudio = await this.buildCombinedClipAudio({
 			video,
@@ -262,11 +265,13 @@ export class ExplanationClipService {
 
 		return {
 			audioRelativePath,
-			audioAbsolutePath: this.blobStorage.resolveRelativePath(audioRelativePath),
+			audioAbsolutePath:
+				this.blobStorage.resolveRelativePath(audioRelativePath),
 			assRelativePath,
 			assAbsolutePath: this.blobStorage.resolveRelativePath(assRelativePath),
 			videoRelativePath,
-			videoAbsolutePath: this.blobStorage.resolveRelativePath(videoRelativePath),
+			videoAbsolutePath:
+				this.blobStorage.resolveRelativePath(videoRelativePath),
 		};
 	}
 

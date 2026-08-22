@@ -20,7 +20,11 @@ describe("buildExplanationCues", () => {
 	});
 
 	it("offsets body cues to match delayed TTS audio", () => {
-		const cues = buildExplanationCues("First sentence. Second sentence.", 3, 0.5);
+		const cues = buildExplanationCues(
+			"First sentence. Second sentence.",
+			3,
+			0.5,
+		);
 
 		expect(cues[0]?.startSeconds).toBe(0.5);
 		expect(cues[1]?.endSeconds).toBe(3.5);

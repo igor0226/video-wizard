@@ -12,7 +12,7 @@
 		"start:dev": "nest start --watch --type-check",
 		"start:debug": "nest start --debug --watch --type-check",
 		"start:prod": "node dist/main.js",
-		"lint": "biome lint --no-errors-on-unmatched",
+		"lint": "biome check --no-errors-on-unmatched",
 		"lint:fix": "biome check --write --no-errors-on-unmatched",
 		"test": "vitest run",
 		"test:watch": "vitest",

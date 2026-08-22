@@ -1,5 +1,5 @@
 import { Module, RequestMethod } from "@nestjs/common";
-import { LoggerModule } from 'nestjs-pino';
+import { LoggerModule } from "nestjs-pino";
 
 import { DashModule } from "./dash/dash.module";
 import { ProcessingModule } from "./processing/processing.module";

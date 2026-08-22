@@ -18,9 +18,8 @@ vi.mock("../shared/ffmpeg-probe", () => ({
 }));
 
 vi.mock("../shared/ffmpeg-loudness", async (importOriginal) => {
-	const actual = await importOriginal<
-		typeof import("../shared/ffmpeg-loudness")
-	>();
+	const actual =
+		await importOriginal<typeof import("../shared/ffmpeg-loudness")>();
 
 	return {
 		...actual,

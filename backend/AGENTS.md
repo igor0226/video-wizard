@@ -110,6 +110,7 @@ These are stored on the video record and passed into the phrase-detection prompt
 
 - `VIDEO_PROCESSING_CRON_ENABLED` — set to `false` to skip cron scheduling and the startup tick (used in tests and local API-only runs). Default: enabled (`true` in `.env.example`).
 - `VIDEO_PROCESSOR_CRON` — cron expression for the worker loop (default every 15s).
+- `CLIP_GENERATION_CONCURRENCY` — max number of explanation clips rendered in parallel per video (default `3`, minimum `1`).
 
 ## Validation
 

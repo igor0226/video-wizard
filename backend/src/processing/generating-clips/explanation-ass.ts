@@ -53,7 +53,10 @@ function splitExplanationSentences(explanation: string): string[] {
 	return parts.map((part) => part.trim()).filter(Boolean);
 }
 
-function buildAssStyles(height: number): { titleStyle: string; bodyStyle: string } {
+function buildAssStyles(height: number): {
+	titleStyle: string;
+	bodyStyle: string;
+} {
 	const titleFontSize = Math.round(height * TITLE_FONT_SCALE);
 	const bodyFontSize = Math.round(height * BODY_FONT_SCALE);
 	const marginV = Math.round(height * VERTICAL_MARGIN_SCALE);

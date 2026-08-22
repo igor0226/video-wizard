@@ -20,9 +20,7 @@
 				"noUnknownAtRules": {
 					"level": "error",
 					"options": {
-						"ignore": [
-							"tailwind"
-						]
+						"ignore": ["tailwind"]
 					}
 				},
 				"noExplicitAny": "error"
@@ -54,10 +52,7 @@
 							{
 								"type": true
 							},
-							[
-								":BUN:",
-								":NODE:"
-							],
+							[":BUN:", ":NODE:"],
 							":BLANK_LINE:",
 							":PACKAGE:",
 							":BLANK_LINE:",

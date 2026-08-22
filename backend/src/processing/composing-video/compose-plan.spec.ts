@@ -11,7 +11,11 @@ function makeClip(
 	overrides: Partial<ExplanationClipManifestEntry> &
 		Pick<
 			ExplanationClipManifestEntry,
-			"index" | "phrase" | "insertAtSeconds" | "durationSeconds" | "relativePath"
+			| "index"
+			| "phrase"
+			| "insertAtSeconds"
+			| "durationSeconds"
+			| "relativePath"
 		>,
 ): ExplanationClipManifestEntry {
 	return {
@@ -147,9 +151,7 @@ describe("buildPlaybackPhrases", () => {
 			{ explanation: "Explains second" },
 		]);
 
-		expect(
-			buildPlaybackPhrases({ parts, explanationsByIndex }),
-		).toEqual([
+		expect(buildPlaybackPhrases({ parts, explanationsByIndex })).toEqual([
 			{
 				index: 0,
 				phrase: "first",

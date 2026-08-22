@@ -1,9 +1,10 @@
 "use client";
 
+import type { LanguageLevel } from "../types/video";
+
 import { useCallback, useState } from "react";
 
 import { apiUrl } from "../lib/api";
-import type { LanguageLevel } from "../types/video";
 
 type UploadVideoInput = {
 	title: string;
@@ -83,7 +84,9 @@ export function useVideoUpload() {
 						return;
 					}
 
-					const responsePayload = JSON.parse(xhr.responseText) as { id: string };
+					const responsePayload = JSON.parse(xhr.responseText) as {
+						id: string;
+					};
 					setUploadProgress(100);
 					resolve(responsePayload.id);
 				};
