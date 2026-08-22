@@ -20,6 +20,8 @@ import {
 } from "../shared/ffmpeg-probe";
 import { normalizeFfmpegError, runProcess } from "../shared/ffmpeg-process";
 
+export const FADE_OUT_SECONDS = 0.7;
+
 export type ComposeVideoInput = {
 	video: VideoRecord;
 	clipsManifestRelativePath: string;
@@ -39,6 +41,16 @@ type ComposeContext = {
 };
 
 type VideoProbe = Awaited<ReturnType<typeof probeVideoFile>>;
+
+function buildAudioFadeOutFilter(durationSeconds: number): string | null {
+	if (durationSeconds <= 0) {
+		return null;
+	}
+
+	const fadeDuration = Math.min(FADE_OUT_SECONDS, durationSeconds);
+	const fadeStart = Math.max(0, durationSeconds - fadeDuration);
+	return `afade=t=out:st=${fadeStart}:d=${fadeDuration}`;
+}
 
 @Injectable()
 export class FfmpegComposeService {
@@ -181,11 +193,13 @@ export class FfmpegComposeService {
 			partPaths.push(partAbsolutePath);
 
 			if (part.kind === "source") {
+				const nextPart = input.parts[index + 1];
 				await this.renderSourcePart({
 					sourceAbsolutePath: input.context.sourceAbsolutePath,
 					outputAbsolutePath: partAbsolutePath,
 					startSeconds: part.startSeconds,
 					endSeconds: part.endSeconds,
+					fadeOutAudio: nextPart?.kind === "clip",
 					probe: input.probe,
 					videoId: input.context.video.id,
 				});
@@ -327,6 +341,7 @@ export class FfmpegComposeService {
 		outputAbsolutePath: string;
 		startSeconds: number;
 		endSeconds: number;
+		fadeOutAudio: boolean;
 		probe: VideoProbe;
 		videoId: string;
 	}): Promise<void> {
@@ -335,39 +350,52 @@ export class FfmpegComposeService {
 			throw new Error("Invalid source part duration");
 		}
 
+		const audioFadeFilter = input.fadeOutAudio
+			? buildAudioFadeOutFilter(durationSeconds)
+			: null;
+
+		const ffmpegArgs = [
+			"-y",
+			"-ss",
+			String(input.startSeconds),
+			"-i",
+			input.sourceAbsolutePath,
+			"-t",
+			String(durationSeconds),
+			"-map",
+			"0:v:0",
+			"-map",
+			"0:a:0?",
+			"-c:v",
+			"libx264",
+			"-preset",
+			"veryfast",
+			"-crf",
+			"23",
+			"-pix_fmt",
+			"yuv420p",
+			"-r",
+			String(input.probe.fps),
+		];
+
+		if (audioFadeFilter) {
+			ffmpegArgs.push("-af", audioFadeFilter);
+		}
+
+		ffmpegArgs.push(
+			"-c:a",
+			"aac",
+			"-b:a",
+			"128k",
+			"-ar",
+			String(input.probe.audioSampleRate),
+			"-ac",
+			String(input.probe.audioChannels),
+			input.outputAbsolutePath,
+		);
+
 		try {
-			await runProcess("ffmpeg", [
-				"-y",
-				"-ss",
-				String(input.startSeconds),
-				"-i",
-				input.sourceAbsolutePath,
-				"-t",
-				String(durationSeconds),
-				"-map",
-				"0:v:0",
-				"-map",
-				"0:a:0?",
-				"-c:v",
-				"libx264",
-				"-preset",
-				"veryfast",
-				"-crf",
-				"23",
-				"-pix_fmt",
-				"yuv420p",
-				"-r",
-				String(input.probe.fps),
-				"-c:a",
-				"aac",
-				"-b:a",
-				"128k",
-				"-ar",
-				String(input.probe.audioSampleRate),
-				"-ac",
-				String(input.probe.audioChannels),
-				input.outputAbsolutePath,
-			]);
+			await runProcess("ffmpeg", ffmpegArgs);
 		} catch (error) {
 			throw normalizeFfmpegError(error);
 		}

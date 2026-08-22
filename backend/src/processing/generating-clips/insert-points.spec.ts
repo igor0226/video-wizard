@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	buildPhraseInsertPoints,
 	resolveInsertAtSeconds,
+	resolveSentenceStartSeconds,
 } from "./insert-points";
 import type { DetectedPhrase } from "../detecting-phrases/phrase-detection.service";
 import type { WhisperTranscript } from "../shared/merge-transcripts";
@@ -84,6 +85,57 @@ describe("resolveInsertAtSeconds", () => {
 	});
 });
 
+describe("resolveSentenceStartSeconds", () => {
+	it("uses Whisper segment start when the phrase word is inside a segment", () => {
+		const transcript: WhisperTranscript = {
+			language: "english",
+			duration: 10,
+			text: "Hello world again",
+			words: [
+				{ word: "Hello", start: 0, end: 0.4 },
+				{ word: "world", start: 0.4, end: 0.8 },
+				{ word: "again", start: 5, end: 5.4 },
+			],
+			segments: [
+				{ start: 0, end: 2.5, text: "Hello world." },
+				{ start: 5, end: 6.2, text: "Again." },
+			],
+		};
+
+		expect(resolveSentenceStartSeconds(transcript, 1)).toBe(0);
+	});
+
+	it("falls back to punctuation when segments are missing", () => {
+		const transcript: WhisperTranscript = {
+			language: "english",
+			duration: 5,
+			text: "Hello world again",
+			words: [
+				{ word: "Hello", start: 0, end: 0.4 },
+				{ word: "world.", start: 0.4, end: 0.8 },
+				{ word: "again", start: 1.2, end: 1.6 },
+			],
+		};
+
+		expect(resolveSentenceStartSeconds(transcript, 2)).toBe(1.2);
+	});
+
+	it("falls back to a word gap when no punctuation is present", () => {
+		const transcript: WhisperTranscript = {
+			language: "english",
+			duration: 10,
+			text: "Hello world again",
+			words: [
+				{ word: "Hello", start: 0, end: 0.4 },
+				{ word: "world", start: 0.4, end: 0.8 },
+				{ word: "again", start: 2, end: 2.4 },
+			],
+		};
+
+		expect(resolveSentenceStartSeconds(transcript, 2)).toBe(2);
+	});
+});
+
 describe("buildPhraseInsertPoints", () => {
 	it("groups multiple phrases on the same sentence end timestamp", () => {
 		const transcript: WhisperTranscript = {
@@ -112,11 +164,13 @@ describe("buildPhraseInsertPoints", () => {
 				index: 0,
 				phrase: expect.objectContaining({ phrase: "Hello world" }),
 				insertAtSeconds: 2.5,
+				sentenceStartSeconds: 0,
 			},
 			{
 				index: 1,
 				phrase: expect.objectContaining({ phrase: "again now" }),
 				insertAtSeconds: 2.5,
+				sentenceStartSeconds: 0,
 			},
 		]);
 	});

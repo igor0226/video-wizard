@@ -36,7 +36,7 @@ Nest.js app under `src/` with feature modules:
 - `videos/audio/<videoId>/track.mp3` — extracted mono MP3 for transcription
 - `videos/transcripts/<videoId>/transcript.json` — Whisper verbose JSON (word timestamps)
 - `videos/explanations/<videoId>/phrases.json` — detected tricky phrases with word indexes and explanations
-- `videos/explanations/<videoId>/clips.json` — manifest of rendered explanation clips (insert time + paths)
+- `videos/explanations/<videoId>/clips.json` — manifest of rendered explanation clips (`insertAtSeconds`, `sentenceStartSeconds`, duration, paths)
 - `videos/explanations/<videoId>/clips/<nnn>.mp3|ass|mp4` — per-phrase TTS audio, ASS subtitles, and rendered clip
 - `videos/enriched/<videoId>/output.mp4` — composed destination video (source + spliced explanation clips)
 - `videos/records/<videoId>.json` — includes `sourceLanguage`, `explanationLanguage`, `languageLevel`
@@ -51,8 +51,8 @@ Worker order for each pending video: **audio extract → Whisper transcribe → 
 - `WhisperTranscriptionService` — OpenAI `whisper-1` with `verbose_json` + word timestamps; writes `transcripts/<videoId>/transcript.json`
 - `PhraseDetectionService` — OpenAI `gpt-5.6-luna` with structured JSON output; writes `explanations/<videoId>/phrases.json`
 - `ExplanationTtsService` — OpenAI `gpt-4o-mini-tts` for explanation narration audio
-- `ExplanationClipService` — FFmpeg slide clips with burned-in phrase title + explanation subtitles (`explanations/<videoId>/clips/`)
-- `FfmpegComposeService` — splices explanation clips after the sentence containing each phrase; writes `enriched/<videoId>/output.mp4`
+- `ExplanationClipService` — FFmpeg slide clips with burned-in phrase title + explanation subtitles; appends a localized "Let's listen once again!" line (spoken + shown) at the end of each clip (`explanations/<videoId>/clips/`)
+- `FfmpegComposeService` — splices explanation clips after the sentence containing each phrase, fades source audio out over 700ms before each clip, then resumes playback from `sentenceStartSeconds` so the target sentence replays after the explanation; writes `enriched/<videoId>/output.mp4`
 - `FfmpegDashService` — DASH packaging from the enriched video
 - Files > 24 MB are split into ~10-minute chunks before transcription and merged with offset word timestamps
 - `OPENAI_API_KEY` is required when the worker runs transcription, phrase detection, or explanation TTS
@@ -114,6 +114,7 @@ These are stored on the video record and passed into the phrase-detection prompt
 
 From `backend/`:
 
+- **Hard rule:** if you see that the changes suggested by the user may require changing the frontend files as well, never change them without asking for the user's permission.
 - **Hard rule:** functions should not receive more than 2 parameters. If the function's logic requires so, pass the paramaters grouped in an object.
 - **Hard rule:** before commit, `npm run lint:fix`
 - **Hard rule:** `npm run typecheck && npm run lint && npm run test && npm run test:e2e`

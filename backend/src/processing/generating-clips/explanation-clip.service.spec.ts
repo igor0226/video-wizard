@@ -166,10 +166,16 @@ describe("ExplanationClipService", () => {
 					expect.objectContaining({
 						phrase: "Hello world",
 						insertAtSeconds: 0.8,
+						sentenceStartSeconds: 0,
 						durationSeconds: 4,
 					}),
 				],
 			},
+		);
+		expect(explanationTtsService.synthesizeSpeech).toHaveBeenCalledWith(
+			expect.objectContaining({
+				explanation: "A greeting. Let's listen once again!",
+			}),
 		);
 		expect(probeLoudnormStats).toHaveBeenCalledTimes(2);
 		expect(probeLoudnormStats).toHaveBeenCalledWith(

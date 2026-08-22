@@ -16,6 +16,7 @@ import {
 	type PhraseInsertPoint,
 	type TranscriptWithSegments,
 } from "./insert-points";
+import { getListenAgainPhrase } from "./listen-again";
 import {
 	ExplanationTtsService,
 	getClipAssRelativePath,
@@ -35,6 +36,7 @@ export type ExplanationClipManifestEntry = {
 	index: number;
 	phrase: string;
 	insertAtSeconds: number;
+	sentenceStartSeconds: number;
 	durationSeconds: number;
 	relativePath: string;
 };
@@ -148,7 +150,7 @@ export class ExplanationClipService {
 		targetIntegratedLufs: number;
 	}): Promise<ExplanationClipManifestEntry> {
 		const { video, insertPoint, probe, targetIntegratedLufs } = input;
-		const { index, phrase, insertAtSeconds } = insertPoint;
+		const { index, phrase, insertAtSeconds, sentenceStartSeconds } = insertPoint;
 		const audioRelativePath = getClipAudioRelativePath(video.id, index);
 		const assRelativePath = getClipAssRelativePath(video.id, index);
 		const videoRelativePath = getClipVideoRelativePath(video.id, index);
@@ -159,10 +161,15 @@ export class ExplanationClipService {
 		const videoAbsolutePath =
 			this.blobStorage.resolveRelativePath(videoRelativePath);
 
+		const listenAgainPhrase = getListenAgainPhrase(video.explanationLanguage);
+		const clipExplanation = phrase.explanation.trim()
+			? `${phrase.explanation.trim()} ${listenAgainPhrase}`
+			: listenAgainPhrase;
+
 		const { durationSeconds: ttsDurationSeconds } =
 			await this.explanationTtsService.synthesizeSpeech({
 				phrase: phrase.phrase,
-				explanation: phrase.explanation,
+				explanation: clipExplanation,
 				explanationLanguage: video.explanationLanguage,
 				outputRelativePath: audioRelativePath,
 			});
@@ -171,13 +178,13 @@ export class ExplanationClipService {
 		const { bodyStartOffsetSeconds, bodyDurationSeconds } =
 			resolveExplanationBodyTiming({
 				phrase: phrase.phrase,
-				explanation: phrase.explanation,
+				explanation: clipExplanation,
 				ttsDurationSeconds,
 				clipGapSeconds: CLIP_GAP_SECONDS,
 			});
 		const assContent = buildExplanationAss({
 			phrase: phrase.phrase,
-			explanation: phrase.explanation,
+			explanation: clipExplanation,
 			durationSeconds,
 			ttsDurationSeconds,
 			bodyStartOffsetSeconds,
@@ -216,6 +223,7 @@ export class ExplanationClipService {
 			index,
 			phrase: phrase.phrase,
 			insertAtSeconds,
+			sentenceStartSeconds,
 			durationSeconds,
 			relativePath: path.posix.normalize(videoRelativePath),
 		};
