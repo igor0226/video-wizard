@@ -64,3 +64,16 @@ export type VideoRetryResponse = {
 	resumeFromStep: ProcessingStep;
 	failureReason: null;
 };
+
+export type PlaybackPhrase = {
+	index: number;
+	phrase: string;
+	explanation: string;
+	startSeconds: number;
+	endSeconds: number;
+};
+
+export type PlaybackPhrasesResponse = {
+	videoId: string;
+	phrases: PlaybackPhrase[];
+};

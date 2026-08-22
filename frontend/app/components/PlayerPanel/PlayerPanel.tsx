@@ -8,6 +8,7 @@ import {
 	MediaProvider,
 	type MediaProviderAdapter,
 	type MediaProviderChangeEvent,
+	Track,
 } from "@vidstack/react";
 import {
 	DefaultVideoLayout,
@@ -15,7 +16,9 @@ import {
 } from "@vidstack/react/player/layouts/default";
 import * as DASH from "dashjs";
 
+import { usePlaybackPhrases } from "../../hooks/usePlaybackPhrases";
 import { apiUrl } from "../../lib/api";
+import { PhraseTimeSlider } from "./PhraseTimeSlider";
 import "./PlayerPanel.css";
 
 type PlayerPanelProps = {
@@ -32,6 +35,11 @@ function onProviderChange(
 }
 
 export function PlayerPanel({ selectedVideo }: PlayerPanelProps) {
+	const { phrases } = usePlaybackPhrases(
+		selectedVideo?.id,
+		selectedVideo?.playable,
+	);
+
 	return (
 		<section className="playerPanel">
 			{selectedVideo?.playable ? (
@@ -41,7 +49,24 @@ export function PlayerPanel({ selectedVideo }: PlayerPanelProps) {
 					src={apiUrl(`/api/dash/${selectedVideo.id}/manifest.mpd`)}
 				>
 					<MediaProvider />
-					<DefaultVideoLayout icons={defaultLayoutIcons} />
+					{phrases.length > 0 ? (
+						<Track
+							kind="chapters"
+							default
+							type="json"
+							content={{
+								cues: phrases.map((phrase) => ({
+									startTime: phrase.startSeconds,
+									endTime: phrase.endSeconds,
+									text: phrase.phrase,
+								})),
+							}}
+						/>
+					) : null}
+					<DefaultVideoLayout
+						icons={defaultLayoutIcons}
+						slots={{ timeSlider: <PhraseTimeSlider /> }}
+					/>
 				</MediaPlayer>
 			) : (
 				<div className="videoPlaceholder">

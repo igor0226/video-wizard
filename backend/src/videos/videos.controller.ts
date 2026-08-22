@@ -34,6 +34,11 @@ export class VideosController {
 		return this.videosService.getVideoStatusForApi(id);
 	}
 
+	@Get(":id/playback-phrases")
+	async getPlaybackPhrases(@Param("id") id: string) {
+		return this.videosService.getPlaybackPhrasesForApi(id);
+	}
+
 	@Post(":id/retry")
 	@HttpCode(200)
 	async retryVideo(@Param("id") id: string) {

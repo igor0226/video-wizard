@@ -170,6 +170,10 @@ export class BlobStorageService {
 		return path.posix.join(ENRICHED_DIR, videoId, "output.mp4");
 	}
 
+	getPlaybackPhrasesRelativePath(videoId: string): string {
+		return path.posix.join(ENRICHED_DIR, videoId, "playback-phrases.json");
+	}
+
 	getDashDirectoryRelativePath(videoId: string): string {
 		return path.posix.join(DASH_DIR, videoId);
 	}
