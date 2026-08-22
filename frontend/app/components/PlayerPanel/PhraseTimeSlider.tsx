@@ -1,9 +1,6 @@
 "use client";
 
-import {
-	TimeSlider,
-	type TimeSliderInstance,
-} from "@vidstack/react";
+import { TimeSlider, type TimeSliderInstance } from "@vidstack/react";
 import {
 	useDefaultLayoutContext,
 	useDefaultLayoutWord,
@@ -17,8 +14,12 @@ function isExplanationCue(cue: { text: string }): boolean {
 export function PhraseTimeSlider() {
 	const [instance, setInstance] = useState<TimeSliderInstance | null>(null);
 	const [width, setWidth] = useState(0);
-	const { sliderChaptersMinWidth, disableTimeSlider, seekStep, noScrubGesture } =
-		useDefaultLayoutContext();
+	const {
+		sliderChaptersMinWidth,
+		disableTimeSlider,
+		seekStep,
+		noScrubGesture,
+	} = useDefaultLayoutContext();
 	const label = useDefaultLayoutWord("Seek");
 
 	useEffect(() => {

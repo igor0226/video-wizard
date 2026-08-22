@@ -6,6 +6,32 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { BlobStorageService } from "./blob-storage.service";
 
+describe("BlobStorageService", () => {
+	let storageRoot: string;
+	let service: BlobStorageService;
+
+	beforeEach(async () => {
+		storageRoot = await mkdtemp(path.join(os.tmpdir(), "blob-storage-test-"));
+		process.env.STORAGE_ROOT = storageRoot;
+		service = new BlobStorageService();
+		await service.ensureLayout();
+	});
+
+	afterEach(async () => {
+		delete process.env.STORAGE_ROOT;
+		await rm(storageRoot, { recursive: true, force: true });
+	});
+
+	it("writes and reads text via relative paths", async () => {
+		const relativePath = "explanations/video-1/clips/000.ass";
+		const contents = "[Script Info]\nTitle: test\n";
+
+		await service.writeText(relativePath, contents);
+
+		expect(await service.readText(relativePath)).toBe(contents);
+	});
+});
+
 describe("BlobStorageService.clearProcessingArtifactsFromStep", () => {
 	let storageRoot: string;
 	let service: BlobStorageService;

@@ -18,7 +18,7 @@ async function bootstrap() {
 	const port = Number(process.env.PORT ?? 3001);
 	await app.listen(port);
 	app.get(Logger).log(`listening on http://localhost:${port}`);
-	app.get(Logger).log(`clips will be generated`);
+	app.get(Logger).log("Parallel");
 }
 
 void bootstrap();

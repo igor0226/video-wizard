@@ -33,7 +33,7 @@ Status is `pending` → `processing` → `ready` | `failed`. Local filesystem on
 - **Data Fetching:** TanStack Query
 - **Playback:** Vidstack (`@vidstack/react`) + dash.js
 - **UI:** Radix UI primitives + shadcn-style component patterns
-- **Lint/Format:** Biome (frontend)
+- **Lint/Format:** Biome (`frontend/` and `backend/`)
 - **Transcription:** OpenAI Whisper (`whisper-1`, word timestamps)
 - **Phrase analysis:** OpenAI (`gpt-5.6-luna`)
 - **TTS:** OpenAI (`gpt-4o-mini-tts`) for explanation narration
@@ -170,13 +170,46 @@ Format, typecheck, and lint (host Node; run `nvm use` first):
 
 ```bash
 cd frontend && npm run lint:fix && npm run typecheck && npm run lint
-cd backend && npm run typecheck
+cd backend && npm run lint:fix && npm run typecheck && npm run lint
 ```
 
 If Next.js build cache gets corrupted with route resolution issues:
 
 ```bash
 cd frontend && rm -rf .next && npm run build
+```
+
+## Editor setup (VS Code / Cursor)
+
+Both packages use [Biome](https://biomejs.dev/) for linting and formatting. Committed editor config lives in:
+
+- `backend/.vscode/` — backend workspace settings + extension recommendations
+- `frontend/.vscode/` — frontend workspace settings + extension recommendations
+
+Open either a single package folder (`backend/` or `frontend/`) or the workspace file:
+
+```bash
+cursor backend/
+# or
+cursor video-streaming.code-workspace
+```
+
+When prompted, install the recommended **Biome** extension (`biomejs.biome`). The repo config then enables:
+
+- Biome as the default formatter
+- format on save
+- safe Biome fixes on save
+
+Each package uses its own local Biome binary (`./node_modules/.bin/biome`) and `biome.json`. Run `npm install` in the package you are editing before opening it in the editor.
+
+CLI equivalents:
+
+```bash
+cd backend && npm run lint      # lint only
+cd backend && npm run lint:fix  # format + lint fixes
+
+cd frontend && npm run lint
+cd frontend && npm run lint:fix
 ```
 
 ## Notes

@@ -1,5 +1,7 @@
 "use client";
 
+import type { LanguageLevel } from "../../types/video";
+
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -19,7 +21,6 @@ import {
 } from "../../components/ui/select";
 import { useVideoUpload } from "../../hooks/useVideoUpload";
 import { LANGUAGE_LEVELS, LANGUAGE_OPTIONS } from "../../lib/languages";
-import type { LanguageLevel } from "../../types/video";
 import "../../styles/tasks-page.css";
 import "./new-video-page.css";
 

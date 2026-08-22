@@ -57,6 +57,10 @@ describe("ExplanationTtsService", () => {
 			resolveRelativePath: vi.fn(
 				(relativePath: string) => `/tmp/videos/${relativePath}`,
 			),
+			getListenAgainAssetRelativePath: vi.fn(
+				(language: string) => `assets/listen-again/${language}.mp3`,
+			),
+			fileExists: vi.fn(async () => false),
 		} as unknown as BlobStorageService;
 		service = new ExplanationTtsService(
 			{ info: vi.fn() } as never,
@@ -99,5 +103,39 @@ describe("ExplanationTtsService", () => {
 				outputRelativePath: "explanations/video-1/clips/000.mp3",
 			}),
 		).rejects.toThrow("OPENAI_API_KEY is required for explanation TTS");
+	});
+
+	it("synthesizes closing audio when the cached asset is missing", async () => {
+		const result = await service.resolveClosingAudio("English");
+
+		expect(result).toEqual({
+			absolutePath: "/tmp/videos/assets/listen-again/english.mp3",
+			durationSeconds: 4.2,
+		});
+		expect(blobStorage.fileExists).toHaveBeenCalledWith(
+			"assets/listen-again/english.mp3",
+		);
+		expect(speechCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				input: "Let's listen once again!",
+			}),
+		);
+		expect(blobStorage.writeUploadFile).toHaveBeenCalledWith(
+			"assets/listen-again/english.mp3",
+			expect.any(Buffer),
+		);
+	});
+
+	it("reuses cached closing audio without synthesizing again", async () => {
+		vi.mocked(blobStorage.fileExists).mockResolvedValue(true);
+
+		const result = await service.resolveClosingAudio("English");
+
+		expect(result).toEqual({
+			absolutePath: "/tmp/videos/assets/listen-again/english.mp3",
+			durationSeconds: 4.2,
+		});
+		expect(speechCreate).not.toHaveBeenCalled();
+		expect(blobStorage.writeUploadFile).not.toHaveBeenCalled();
 	});
 });

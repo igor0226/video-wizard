@@ -8,7 +8,7 @@
 		"build": "next build",
 		"start": "next start",
 		"typecheck": "tsc --noEmit",
-		"lint": "biome lint --no-errors-on-unmatched",
+		"lint": "biome check --no-errors-on-unmatched",
 		"lint:fix": "biome check --write --no-errors-on-unmatched"
 	},
 	"keywords": [],

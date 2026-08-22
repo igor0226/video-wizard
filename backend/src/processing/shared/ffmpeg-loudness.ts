@@ -1,7 +1,4 @@
-import {
-	normalizeFfmpegError,
-	runProcessWithStderr,
-} from "./ffmpeg-process";
+import { normalizeFfmpegError, runProcessWithStderr } from "./ffmpeg-process";
 
 export const DEFAULT_INTEGRATED_LUFS = -16;
 const MIN_INTEGRATED_LUFS = -70;
@@ -23,7 +20,9 @@ type LoudnormJson = {
 	target_offset?: string | number;
 };
 
-function parseLoudnormNumber(value: string | number | undefined): number | null {
+function parseLoudnormNumber(
+	value: string | number | undefined,
+): number | null {
 	if (value === undefined) {
 		return null;
 	}

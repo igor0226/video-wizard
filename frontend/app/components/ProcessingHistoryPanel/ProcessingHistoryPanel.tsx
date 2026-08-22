@@ -53,7 +53,9 @@ export function ProcessingHistoryPanel({
 	const lastFailedIndex = useMemo(() => {
 		if (!events) return -1;
 
-		const lastFailedIndex = [...events].reverse().findIndex((event) => event.status === "failed") ?? -1;
+		const lastFailedIndex =
+			[...events].reverse().findIndex((event) => event.status === "failed") ??
+			-1;
 		return lastFailedIndex === -1 ? -1 : events.length - lastFailedIndex - 1;
 	}, [events]);
 

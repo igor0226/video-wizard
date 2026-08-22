@@ -19,6 +19,23 @@ export type CompositionPart =
 			clip: ExplanationClipManifestEntry;
 	  };
 
+function resolveResumeCursor(input: {
+	clipsAtInsert: ExplanationClipManifestEntry[];
+	insertAtSeconds: number;
+}): number {
+	const earliestSentenceStart = Math.min(
+		...input.clipsAtInsert.map(
+			(clip) => clip.sentenceStartSeconds ?? input.insertAtSeconds,
+		),
+	);
+
+	if (earliestSentenceStart >= input.insertAtSeconds) {
+		return input.insertAtSeconds;
+	}
+
+	return Math.max(0, earliestSentenceStart);
+}
+
 export function buildCompositionParts(
 	clips: ExplanationClipManifestEntry[],
 	sourceDurationSeconds: number,
@@ -63,7 +80,10 @@ export function buildCompositionParts(
 			parts.push({ kind: "clip", clip });
 		}
 
-		sourceCursor = insertAtSeconds;
+		sourceCursor = resolveResumeCursor({
+			clipsAtInsert,
+			insertAtSeconds,
+		});
 	}
 
 	if (sourceCursor < sourceDurationSeconds) {

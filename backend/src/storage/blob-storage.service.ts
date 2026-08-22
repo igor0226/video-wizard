@@ -20,6 +20,8 @@ const TRANSCRIPTS_DIR = "transcripts";
 const EXPLANATIONS_DIR = "explanations";
 const ENRICHED_DIR = "enriched";
 const HISTORY_DIR = "history";
+const ASSETS_DIR = "assets";
+const LISTEN_AGAIN_DIR = "listen-again";
 
 async function ensureDir(dirPath: string): Promise<void> {
 	await mkdir(dirPath, { recursive: true });
@@ -46,6 +48,7 @@ export class BlobStorageService {
 			ensureDir(path.join(storageRoot, EXPLANATIONS_DIR)),
 			ensureDir(path.join(storageRoot, ENRICHED_DIR)),
 			ensureDir(path.join(storageRoot, HISTORY_DIR)),
+			ensureDir(path.join(storageRoot, ASSETS_DIR, LISTEN_AGAIN_DIR)),
 		]);
 	}
 
@@ -61,6 +64,12 @@ export class BlobStorageService {
 	async readText(relativePath: string): Promise<string> {
 		const absolutePath = this.resolveRelativePath(relativePath);
 		return readFile(absolutePath, "utf8");
+	}
+
+	async writeText(relativePath: string, contents: string): Promise<void> {
+		const absolutePath = this.resolveRelativePath(relativePath);
+		await ensureDir(path.dirname(absolutePath));
+		await writeFile(absolutePath, contents, "utf8");
 	}
 
 	async readBytes(relativePath: string): Promise<Buffer> {
@@ -172,6 +181,10 @@ export class BlobStorageService {
 
 	getPlaybackPhrasesRelativePath(videoId: string): string {
 		return path.posix.join(ENRICHED_DIR, videoId, "playback-phrases.json");
+	}
+
+	getListenAgainAssetRelativePath(language: string): string {
+		return path.posix.join(ASSETS_DIR, LISTEN_AGAIN_DIR, `${language}.mp3`);
 	}
 
 	getDashDirectoryRelativePath(videoId: string): string {
