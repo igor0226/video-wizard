@@ -25,7 +25,7 @@ export function AppPageHeader({ breadcrumbs }: AppPageHeaderProps) {
 	return (
 		<header className="tasksPageHeader">
 			<div className="tasksPageHeaderTop">
-				<h1>Awesome video processing service</h1>
+				<h1>Listening</h1>
 				<Avatar>
 					<AvatarFallback>
 						<User className="h-5 w-5" />

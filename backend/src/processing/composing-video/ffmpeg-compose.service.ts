@@ -20,6 +20,8 @@ import {
 } from "../shared/ffmpeg-probe";
 import { normalizeFfmpegError, runProcess } from "../shared/ffmpeg-process";
 
+import { buildAudioFadeOutFilter } from "./utils/audio-fade-out";
+
 export const FADE_OUT_SECONDS = 0.7;
 
 export type ComposeVideoInput = {
@@ -41,16 +43,6 @@ type ComposeContext = {
 };
 
 type VideoProbe = Awaited<ReturnType<typeof probeVideoFile>>;
-
-function buildAudioFadeOutFilter(durationSeconds: number): string | null {
-	if (durationSeconds <= 0) {
-		return null;
-	}
-
-	const fadeDuration = Math.min(FADE_OUT_SECONDS, durationSeconds);
-	const fadeStart = Math.max(0, durationSeconds - fadeDuration);
-	return `afade=t=out:st=${fadeStart}:d=${fadeDuration}`;
-}
 
 @Injectable()
 export class FfmpegComposeService {
@@ -351,7 +343,10 @@ export class FfmpegComposeService {
 		}
 
 		const audioFadeFilter = input.fadeOutAudio
-			? buildAudioFadeOutFilter(durationSeconds)
+			? buildAudioFadeOutFilter({
+					durationSeconds,
+					fadeOutSeconds: FADE_OUT_SECONDS,
+				})
 			: null;
 
 		const ffmpegArgs = [

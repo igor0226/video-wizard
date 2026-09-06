@@ -1,63 +1,29 @@
 import { randomUUID } from "node:crypto";
-import { readdir, readFile, stat, writeFile } from "node:fs/promises";
-import path from "node:path";
 
 import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 
+import { Video } from "../models";
 import { BlobStorageService } from "./blob-storage.service";
 import { ProcessingHistoryService } from "./processing-history.service";
 import type { CreateVideoInput, VideoRecord } from "./types";
+import { isInvalidUuidError } from "./utils/postgres-errors";
+import {
+	normalizeVideoRecord,
+	sanitizeFileName,
+	sanitizeTitle,
+} from "./utils/video-record";
 
 const UPLOADS_DIR = "uploads";
 const DASH_DIR = "dash";
-const RECORDS_DIR = "records";
 const MANIFEST_FILE_NAME = "manifest.mpd";
-
-function sanitizeTitle(value: string): string {
-	const trimmed = value.trim();
-	if (!trimmed) {
-		return "Untitled video";
-	}
-	return trimmed.slice(0, 120);
-}
-
-function sanitizeFileName(value: string): string {
-	const normalized = value
-		.trim()
-		.replace(/\s+/g, "-")
-		.replace(/[^a-zA-Z0-9_.-]/g, "");
-	return normalized || "upload.mp4";
-}
-
-function toRecordFileName(videoId: string): string {
-	return `${videoId}.json`;
-}
-
-async function readRecordFile(recordPath: string): Promise<VideoRecord> {
-	const content = await readFile(recordPath, "utf8");
-	const parsed = JSON.parse(content) as Partial<VideoRecord>;
-	return {
-		...parsed,
-		transcriptRelativePath: parsed.transcriptRelativePath ?? null,
-		phrasesRelativePath: parsed.phrasesRelativePath ?? null,
-		sourceLanguage: parsed.sourceLanguage ?? "",
-		explanationLanguage: parsed.explanationLanguage ?? "",
-		languageLevel: parsed.languageLevel ?? "B1",
-	} as VideoRecord;
-}
-
-async function isDirectory(absolutePath: string): Promise<boolean> {
-	try {
-		const entry = await stat(absolutePath);
-		return entry.isDirectory();
-	} catch {
-		return false;
-	}
-}
 
 @Injectable()
 export class VideoRepositoryService {
 	constructor(
+		@InjectRepository(Video)
+		private readonly videoRepository: Repository<Video>,
 		private readonly blobStorage: BlobStorageService,
 		private readonly processingHistory: ProcessingHistoryService,
 	) {}
@@ -67,12 +33,8 @@ export class VideoRepositoryService {
 
 		const videoId = randomUUID();
 		const safeFileName = sanitizeFileName(input.originalFileName);
-		const sourceRelativePath = path.posix.join(
-			UPLOADS_DIR,
-			videoId,
-			safeFileName,
-		);
-		const dashRelativePath = path.posix.join(DASH_DIR, videoId);
+		const sourceRelativePath = `${UPLOADS_DIR}/${videoId}/${safeFileName}`;
+		const dashRelativePath = `${DASH_DIR}/${videoId}`;
 		const nowIso = new Date().toISOString();
 
 		const record: VideoRecord = {
@@ -100,42 +62,29 @@ export class VideoRepositoryService {
 			sourceRelativePath,
 			input.fileBuffer,
 		);
-		const recordPath = this.blobStorage.resolveRelativePath(
-			path.posix.join(RECORDS_DIR, toRecordFileName(videoId)),
-		);
-		await writeFile(recordPath, JSON.stringify(record, null, 2), "utf8");
+		await this.videoRepository.save(record);
 		await this.processingHistory.initHistory(videoId);
 		return record;
 	}
 
 	async listVideos(): Promise<VideoRecord[]> {
-		await this.blobStorage.ensureLayout();
-		const recordsPath = this.blobStorage.resolveRelativePath(RECORDS_DIR);
-		if (!(await isDirectory(recordsPath))) {
-			return [];
-		}
-
-		const entries = await readdir(recordsPath, { withFileTypes: true });
-		const records = await Promise.all(
-			entries
-				.filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-				.map((entry) => readRecordFile(path.join(recordsPath, entry.name))),
-		);
-
-		return records.sort((left, right) =>
-			right.createdAt.localeCompare(left.createdAt),
-		);
+		const records = await this.videoRepository.find({
+			order: { createdAt: "DESC" },
+		});
+		return records.map(normalizeVideoRecord);
 	}
 
 	async getVideoById(videoId: string): Promise<VideoRecord | null> {
-		await this.blobStorage.ensureLayout();
-		const recordPath = this.blobStorage.resolveRelativePath(
-			path.posix.join(RECORDS_DIR, toRecordFileName(videoId)),
-		);
 		try {
-			return await readRecordFile(recordPath);
-		} catch {
-			return null;
+			const record = await this.videoRepository.findOne({
+				where: { id: videoId },
+			});
+			return record ? normalizeVideoRecord(record) : null;
+		} catch (error) {
+			if (isInvalidUuidError(error)) {
+				return null;
+			}
+			throw error;
 		}
 	}
 
@@ -156,18 +105,15 @@ export class VideoRepositoryService {
 			updatedAt: new Date().toISOString(),
 		};
 
-		const recordPath = this.blobStorage.resolveRelativePath(
-			path.posix.join(RECORDS_DIR, toRecordFileName(videoId)),
-		);
-		await writeFile(recordPath, JSON.stringify(updated, null, 2), "utf8");
+		await this.videoRepository.save(updated);
 		return updated;
 	}
 
 	async getNextPendingVideo(): Promise<VideoRecord | null> {
-		const videos = await this.listVideos();
-		const pending = videos
-			.filter((video) => video.status === "pending")
-			.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
-		return pending[0] ?? null;
+		const record = await this.videoRepository.findOne({
+			where: { status: "pending" },
+			order: { createdAt: "ASC" },
+		});
+		return record ? normalizeVideoRecord(record) : null;
 	}
 }

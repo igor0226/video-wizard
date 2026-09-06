@@ -2,7 +2,7 @@
 
 Make sure to read the AGENTS.md file in the parent direction.
 
-Run the app with Docker Compose from the repo root (`docker compose up --build`); see the parent [`AGENTS.md`](../AGENTS.md). FFmpeg is in the backend image when using Compose.
+Run the app with Docker Compose from the repo root (`docker compose up --build`); see the parent [`AGENTS.md`](../AGENTS.md). Compose starts **postgres**, **backend**, and **frontend**. FFmpeg is in the backend image when using Compose. The backend runs migrations on boot (`npm run migration:run`) before `start:dev`.
 
 ## Architecture
 
@@ -11,25 +11,65 @@ Nest.js app under `src/` with feature modules:
 - `videos/` — list/upload/status HTTP API
 - `processing/` — cron worker, jobs, FFmpeg DASH generation, audio extraction, Whisper transcription, phrase detection, explanation clip generation, video composition
 - `dash/` — manifest rewrite + segment serving
-- `storage/` — filesystem storage + video record repository
+- `storage/` — `BlobStorageService` (filesystem blobs) + Postgres-backed repositories/services
+- `models/` — TypeORM entity declarations (`Video`, `ProcessingHistory`, `ProcessingLock`)
+- `database/` — TypeORM wiring, migrations, backfill script
 
 `main.ts` sets Pino app logger, CORS, global `api` prefix, port `3001`. Worker starts on boot via `ProcessingWorkerService` (`OnModuleInit`) and polls about every 15s.
+
+Store module-bound utility functions under each module's `utils/` directory (e.g. `storage/utils/`, `videos/utils/`, `processing/utils/`). Do not blend helpers into service files.
 
 ## Tech stack
 
 - Nest.js + TypeScript
 - SWC for Nest emit (`nest build` / `nest start`); `tsc --noEmit` for type checking (`npm run typecheck`, and forked in parallel on `start:dev`)
 - Pino via `nestjs-pino` (pretty in non-production)
-- Local disk storage (no DB/S3 yet)
+- PostgreSQL + TypeORM (`@nestjs/typeorm`, `typeorm`, `pg`)
+- Local disk storage for media/pipeline artifacts (no S3 yet)
 - FFmpeg for DASH generation
 - `cron` for the background processing loop
 - Biome (lint/format)
 
 ## Key technical details
 
-### Storage (repo-root `videos/`)
+### PostgreSQL
 
-`STORAGE_ROOT` defaults to `../videos` from the `backend/` cwd:
+Credentials come from env (see `backend/.env.example`):
+
+- `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
+
+In Docker Compose, backend uses `POSTGRES_HOST=postgres`. Host dev defaults to `localhost`.
+
+**Tables** (see `src/models/`):
+
+- `videos` — video metadata (`VideoRecord` fields)
+- `processing_history` — per-video step history (`currentStep`, `events` jsonb)
+- `processing_locks` — worker concurrency guard (row insert = acquire, PK = one lock per video)
+
+Domain types live in [`src/storage/types.ts`](src/storage/types.ts). Entities mirror those types; ISO date/bigint transformers are in `src/models/utils/`.
+
+**Migrations** (TypeORM CLI via `src/database/data-source.ts`):
+
+```bash
+npm run migration:run      # apply pending migrations
+npm run migration:revert   # revert last migration
+npm run migration:generate # generate from entity diff (rename output file)
+npm run migration:create   # empty migration scaffold
+```
+
+**Legacy backfill** — one-time import of old JSON metadata into Postgres:
+
+```bash
+npm run db:backfill
+```
+
+Reads `videos/records/*.json` and `videos/history/*.json` under `STORAGE_ROOT`, applies legacy defaults for missing language fields, and inserts into Postgres. Safe to re-run only if tables are empty/truncated.
+
+**Tests** — unit/e2e suites that boot `AppModule` use `@testcontainers/postgresql` (see `test/postgres-test-setup.ts`). E2e global setup runs migrations before the suite.
+
+### Filesystem storage (repo-root `videos/`)
+
+`STORAGE_ROOT` defaults to `../videos` from the `backend/` cwd (Docker: `/videos`):
 
 - `videos/uploads/<videoId>/<source-file>`
 - `videos/dash/<videoId>/manifest.mpd` + segments
@@ -40,9 +80,9 @@ Nest.js app under `src/` with feature modules:
 - `videos/explanations/<videoId>/clips/<nnn>.speech.mp3|mp3|ass|mp4` — per-phrase speech TTS, combined audio (speech + cached closing), ASS subtitles, and rendered clip
 - `videos/assets/listen-again/<language>.mp3` — cached per-language "Let's listen once again!" TTS (recorded once, reused across videos)
 - `videos/enriched/<videoId>/output.mp4` — composed destination video (source + spliced explanation clips)
-- `videos/records/<videoId>.json` — includes `sourceLanguage`, `explanationLanguage`, `languageLevel`
-- `videos/history/<videoId>.json` — processing step history (events + current step)
-- `videos/locks/<videoId>.lock` (worker concurrency guard)
+- `videos/enriched/<videoId>/playback-phrases.json` — playback phrase timings for the API
+
+Metadata (`VideoRecord`, processing history, worker locks) is in **PostgreSQL**, not under `videos/records/`, `videos/history/`, or `videos/locks/`.
 
 ### Processing pipeline
 
@@ -59,6 +99,7 @@ Worker order for each pending video: **audio extract → Whisper transcribe → 
 - `OPENAI_API_KEY` is required when the worker runs transcription, phrase detection, or explanation TTS
 - Any step failure marks the video `failed` and records the failing step in history
 - Completed steps are skipped on resume when their output files already exist
+- Worker locking via `ProcessingLockService` (Postgres `processing_locks` table)
 
 Processing steps tracked in history: `queued`, `audio_extract`, `transcribing`, `detecting_phrases`, `generating_clips`, `composing_video`, `dash_encoding`, `completed`, `failed`.
 
@@ -70,7 +111,7 @@ Processing steps tracked in history: `queued`, `audio_extract`, `transcribing`, 
 - `explanationLanguage` — language for AI-generated explanations
 - `languageLevel` — learner CEFR level (`A1`–`C2`, case-insensitive)
 
-These are stored on the video record and passed into the phrase-detection prompt.
+These are stored on the video record (Postgres) and passed into the phrase-detection prompt.
 
 ### Video API processing fields
 
@@ -84,8 +125,8 @@ These are stored on the video record and passed into the phrase-detection prompt
 `POST /api/videos/:id/retry`:
 
 1. Validates `status === "failed"`
-2. Reads the last failed resumable step from `videos/history/<videoId>.json` (`audio_extract`, `transcribing`, `detecting_phrases`, `generating_clips`, `composing_video`, or `dash_encoding`)
-3. Clears artifacts for that step and any downstream steps (keeps upstream outputs so the worker skips completed work)
+2. Reads the last failed resumable step from processing history in Postgres (`audio_extract`, `transcribing`, `detecting_phrases`, `generating_clips`, `composing_video`, or `dash_encoding`)
+3. Clears filesystem artifacts for that step and any downstream steps (keeps upstream outputs so the worker skips completed work)
 4. Appends a history event (`message: "retry requested"`) and sets `currentStep` to the resume step
 5. Sets video record back to `pending` with `failureReason: null` — the cron worker picks it up on the next tick
 
@@ -99,7 +140,8 @@ These are stored on the video record and passed into the phrase-detection prompt
 
 - Keep the worker idempotent and lock-safe (avoid duplicate processing).
 - Return explicit failure reasons for processing errors.
-- Do not break `VideoRecord` schema unless migrations are handled.
+- Do not break `VideoRecord` or entity schemas without TypeORM migrations.
+- Never write or read filesystem blobs outside `BlobStorageService` (tests may use direct disk for fixtures).
 
 ### Logging
 

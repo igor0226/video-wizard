@@ -1,4 +1,22 @@
 services:
+  postgres:
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-video_streaming}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-video_streaming}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   backend:
     build:
       context: ./backend
@@ -12,6 +30,11 @@ services:
       PORT: "3001"
       CORS_ORIGIN: http://localhost:3000
       STORAGE_ROOT: /videos
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-video_streaming}
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "300"
       TSC_WATCHFILE: UsePolling
@@ -20,6 +43,10 @@ services:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
       - ./videos:/videos
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: sh -c "npm run migration:run && npm run start:dev"
     init: true
     tty: true
 
@@ -47,3 +74,4 @@ volumes:
   backend_node_modules:
   frontend_node_modules:
   frontend_next:
+  postgres_data:

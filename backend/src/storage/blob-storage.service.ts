@@ -11,6 +11,7 @@ import path from "node:path";
 import { Injectable } from "@nestjs/common";
 
 import type { ProcessingStep, VideoRecord } from "./types";
+import { resolveStorageRoot } from "./utils/resolve-storage-root";
 
 const UPLOADS_DIR = "uploads";
 const DASH_DIR = "dash";
@@ -25,10 +26,6 @@ const LISTEN_AGAIN_DIR = "listen-again";
 
 async function ensureDir(dirPath: string): Promise<void> {
 	await mkdir(dirPath, { recursive: true });
-}
-
-function resolveStorageRoot(): string {
-	return process.env.STORAGE_ROOT ?? path.join(process.cwd(), "..", "videos");
 }
 
 @Injectable()
