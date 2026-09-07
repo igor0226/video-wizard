@@ -21,6 +21,7 @@ Client data fetching uses TanStack Query (poll list/status). Nest API base URL c
 - Vidstack (`@vidstack/react`) + dash.js for DASH playback
 - shadcn-style UI primitives (manually wired)
 - Tailwind CSS + Biome (lint/format)
+- Vitest + React Testing Library (unit/component tests)
 
 ## Key technical details
 
@@ -42,9 +43,30 @@ Client data fetching uses TanStack Query (poll list/status). Nest API base URL c
 - Use Tailwind spacing/radius scales instead of raw pixel values.
 - Page-level theme overrides may redefine CSS variables; children should still use tokens.
 
+## Testing
+
+Stack: Vitest + React Testing Library + jsdom.
+
+Run from `frontend/`:
+
+- `npm run test` — single CI-style run
+- `npm run test:watch` — watch mode during development
+
+Conventions:
+
+- Colocate tests as `*.test.ts` or `*.test.tsx` beside the source file.
+- Utility tests: call pure functions directly; cover edge cases and invalid input.
+- Component tests: use `render` from `@testing-library/react`, prefer role/text queries, and use `@testing-library/user-event` for clicks/typing.
+- Assert behavior and accessibility, not implementation details (avoid testing internal state).
+- Stub environment variables with `vi.stubEnv` and call `vi.unstubAllEnvs()` in `afterEach`.
+- Mock Next.js modules (e.g. `next/link`) at the top of component test files when needed.
+
+Example utility test: `app/lib/format.test.ts`.
+Example component test: `app/components/ui/button.test.tsx`.
+
 ## Validation
 
 From `frontend/`:
 
 - **Hard rule:** before commit, `npm run lint:fix`
-- **Hard rule:** `npm run typecheck && npm run lint`
+- **Hard rule:** `npm run typecheck && npm run lint && npm run test`
