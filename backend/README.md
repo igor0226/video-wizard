@@ -1,6 +1,6 @@
 # Backend
 
-Nest.js API and background worker for the local video streaming app. Handles upload, S3/MinIO-backed blob storage, FFmpeg DASH processing, and manifest/segment serving.
+Nest.js API and background worker for the **Language Learning Platform**. The current API and processing worker implement the **Listening** skill: video upload, S3/MinIO-backed blob storage, FFmpeg DASH processing, and manifest/segment serving. Planned modules will add Speaking, Writing, and Reading endpoints.
 
 ## Prerequisites
 

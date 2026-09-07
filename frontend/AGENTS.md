@@ -1,12 +1,25 @@
 # Frontend Agent Notes
 
+Next.js frontend for the **Language Learning Platform**. Today's routes implement the **Listening** skill (task list, upload form, DASH playback). The target information architecture adds Dashboard, Speaking, Writing, and Reading surfaces.
+
 Make sure to read the AGENTS.md file in the parent direction.
 
 Run the app with Docker Compose from the repo root (`docker compose up --build`); see the parent [`AGENTS.md`](../AGENTS.md).
 
 ## Architecture
 
-Next.js 14 App Router under `app/`:
+**Target platform routes** (planned IA):
+
+- `/dashboard` — progress overview, activity heatmap, recent activity
+- `/listening` — video library with filters and search
+- `/listening/upload` — standalone full-page upload form
+- `/listening/:videoId` — video detail + DASH player
+- `/speaking` — AI teacher session launcher and call history
+- `/speaking/call/:callId` — live speaking call with captions and vocabulary sheet
+- `/writing` — writing workspace (coming soon)
+- `/reading` — reading practice (planned)
+
+**Current Listening routes** (implemented today):
 
 - `/` — tasks list
 - `/tasks/new` — upload form
