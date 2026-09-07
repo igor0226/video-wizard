@@ -1,4 +1,5 @@
-import { createReadStream } from "node:fs";
+import type { Readable } from "node:stream";
+
 import {
 	Controller,
 	Get,
@@ -52,15 +53,12 @@ export class DashController {
 				.split("/")
 				.map((part) => decodeURIComponent(part.trim()))
 				.filter(Boolean);
-			const absoluteAssetPath = await this.dashService.resolveDashAssetPath(
+			const asset = await this.dashService.getDashAssetStream({
 				videoId,
-				parts,
-			);
-			res.setHeader(
-				"Content-Type",
-				this.dashService.getDashAssetContentType(absoluteAssetPath),
-			);
-			return new StreamableFile(createReadStream(absoluteAssetPath));
+				assetPathParts: parts,
+			});
+			res.setHeader("Content-Type", asset.contentType);
+			return new StreamableFile(asset.stream as Readable);
 		} catch (error) {
 			if (error instanceof NotFoundException) {
 				throw error;

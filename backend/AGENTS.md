@@ -2,7 +2,7 @@
 
 Make sure to read the AGENTS.md file in the parent direction.
 
-Run the app with Docker Compose from the repo root (`docker compose up --build`); see the parent [`AGENTS.md`](../AGENTS.md). Compose starts **postgres**, **backend**, and **frontend**. FFmpeg is in the backend image when using Compose. The backend runs migrations on boot (`npm run migration:run`) before `start:dev`.
+Run the app with Docker Compose from the repo root (`docker compose up --build`); see the parent [`AGENTS.md`](../AGENTS.md). Compose starts **postgres**, **minio**, **backend**, and **frontend**. FFmpeg is in the backend image when using Compose. The backend runs migrations on boot (`npm run migration:run`) before `start:dev`.
 
 ## Architecture
 
@@ -11,7 +11,7 @@ Nest.js app under `src/` with feature modules:
 - `videos/` — list/upload/status HTTP API
 - `processing/` — cron worker, jobs, FFmpeg DASH generation, audio extraction, Whisper transcription, phrase detection, explanation clip generation, video composition
 - `dash/` — manifest rewrite + segment serving
-- `storage/` — `BlobStorageService` (filesystem blobs) + Postgres-backed repositories/services
+- `storage/` — `BlobStorageService` (S3/MinIO object keys) + Postgres-backed repositories/services
 - `models/` — TypeORM entity declarations (`Video`, `ProcessingHistory`, `ProcessingLock`)
 - `database/` — TypeORM wiring, migrations, backfill script
 
@@ -25,8 +25,8 @@ Store module-bound utility functions under each module's `utils/` directory (e.g
 - SWC for Nest emit (`nest build` / `nest start`); `tsc --noEmit` for type checking (`npm run typecheck`, and forked in parallel on `start:dev`)
 - Pino via `nestjs-pino` (pretty in non-production)
 - PostgreSQL + TypeORM (`@nestjs/typeorm`, `typeorm`, `pg`)
-- Local disk storage for media/pipeline artifacts (no S3 yet)
-- FFmpeg for DASH generation
+- S3-compatible object storage via AWS SDK v3 (`@aws-sdk/client-s3`, `@aws-sdk/lib-storage`); MinIO locally, AWS S3 in production
+- FFmpeg for DASH generation and pipeline compositing (uses local temp workspaces under `MEDIA_WORKSPACE_ROOT`)
 - `cron` for the background processing loop
 - Biome (lint/format)
 
@@ -63,26 +63,33 @@ npm run migration:create   # empty migration scaffold
 npm run db:backfill
 ```
 
-Reads `videos/records/*.json` and `videos/history/*.json` under `STORAGE_ROOT`, applies legacy defaults for missing language fields, and inserts into Postgres. Safe to re-run only if tables are empty/truncated.
+Reads legacy `videos/records/*.json` and `videos/history/*.json` from the repo-root `videos/` directory (or `STORAGE_ROOT` if set), applies legacy defaults for missing language fields, and inserts into Postgres. Safe to re-run only if tables are empty/truncated.
 
-**Tests** — unit/e2e suites that boot `AppModule` use `@testcontainers/postgresql` (see `test/postgres-test-setup.ts`). E2e global setup runs migrations before the suite.
+**Tests** — unit/e2e suites that boot `AppModule` use `@testcontainers/postgresql` and a MinIO testcontainer (see `test/postgres-test-setup.ts`, `test/minio-test-setup.ts`). E2e global setup runs migrations before the suite.
 
-### Filesystem storage (repo-root `videos/`)
+### Object storage (MinIO / S3)
 
-`STORAGE_ROOT` defaults to `../videos` from the `backend/` cwd (Docker: `/videos`):
+Blob artifacts are stored in an S3-compatible bucket using the same object keys as the old on-disk layout. Configure via `backend/.env.example`:
 
-- `videos/uploads/<videoId>/<source-file>`
-- `videos/dash/<videoId>/manifest.mpd` + segments
-- `videos/audio/<videoId>/track.mp3` — extracted mono MP3 for transcription
-- `videos/transcripts/<videoId>/transcript.json` — Whisper verbose JSON (word timestamps)
-- `videos/explanations/<videoId>/phrases.json` — detected tricky phrases with word indexes and explanations
-- `videos/explanations/<videoId>/clips.json` — manifest of rendered explanation clips (`insertAtSeconds`, `sentenceStartSeconds`, duration, paths)
-- `videos/explanations/<videoId>/clips/<nnn>.speech.mp3|mp3|ass|mp4` — per-phrase speech TTS, combined audio (speech + cached closing), ASS subtitles, and rendered clip
-- `videos/assets/listen-again/<language>.mp3` — cached per-language "Let's listen once again!" TTS (recorded once, reused across videos)
-- `videos/enriched/<videoId>/output.mp4` — composed destination video (source + spliced explanation clips)
-- `videos/enriched/<videoId>/playback-phrases.json` — playback phrase timings for the API
+- `S3_ENDPOINT` — MinIO URL locally (`http://localhost:9000` on host, `http://minio:9000` in Compose); omit for AWS S3
+- `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`
+- `S3_FORCE_PATH_STYLE` — `true` for MinIO (default when `S3_ENDPOINT` is set)
+- `MEDIA_WORKSPACE_ROOT` — local scratch dir for FFmpeg steps (download inputs → process → upload outputs)
 
-Metadata (`VideoRecord`, processing history, worker locks) is in **PostgreSQL**, not under `videos/records/`, `videos/history/`, or `videos/locks/`.
+Object keys (unchanged from the former filesystem layout):
+
+- `uploads/<videoId>/<source-file>`
+- `dash/<videoId>/manifest.mpd` + segments
+- `audio/<videoId>/track.mp3` — extracted mono MP3 for transcription
+- `transcripts/<videoId>/transcript.json` — Whisper verbose JSON (word timestamps)
+- `explanations/<videoId>/phrases.json` — detected tricky phrases with word indexes and explanations
+- `explanations/<videoId>/clips.json` — manifest of rendered explanation clips
+- `explanations/<videoId>/clips/<nnn>.speech.mp3|mp3|ass|mp4` — per-phrase TTS, combined audio, ASS subtitles, rendered clip
+- `assets/listen-again/<language>.mp3` — cached per-language "Let's listen once again!" TTS
+- `enriched/<videoId>/output.mp4` — composed destination video
+- `enriched/<videoId>/playback-phrases.json` — playback phrase timings for the API
+
+Metadata (`VideoRecord`, processing history, worker locks) is in **PostgreSQL**.
 
 ### Processing pipeline
 
@@ -126,14 +133,14 @@ These are stored on the video record (Postgres) and passed into the phrase-detec
 
 1. Validates `status === "failed"`
 2. Reads the last failed resumable step from processing history in Postgres (`audio_extract`, `transcribing`, `detecting_phrases`, `generating_clips`, `composing_video`, or `dash_encoding`)
-3. Clears filesystem artifacts for that step and any downstream steps (keeps upstream outputs so the worker skips completed work)
+3. Clears object-storage artifacts for that step and any downstream steps (keeps upstream outputs so the worker skips completed work)
 4. Appends a history event (`message: "retry requested"`) and sets `currentStep` to the resume step
 5. Sets video record back to `pending` with `failureReason: null` — the cron worker picks it up on the next tick
 
 ### DASH
 
 - Serve manifests at `/api/dash/<videoId>/manifest.mpd`.
-- `DashService` rewrites served MPDs at read time to inject `<BaseURL>/api/dash/<videoId>/segment/</BaseURL>` before each `<SegmentTemplate>`; on-disk FFmpeg output stays relative.
+- `DashService` rewrites served MPDs at read time to inject `<BaseURL>/api/dash/<videoId>/segment/</BaseURL>` before each `<SegmentTemplate>`; segment bytes are streamed from object storage through the backend.
 - Preserve `manifest.mpd` route + `/segment/` asset path conventions.
 
 ### Guardrails
@@ -141,7 +148,7 @@ These are stored on the video record (Postgres) and passed into the phrase-detec
 - Keep the worker idempotent and lock-safe (avoid duplicate processing).
 - Return explicit failure reasons for processing errors.
 - Do not break `VideoRecord` or entity schemas without TypeORM migrations.
-- Never write or read filesystem blobs outside `BlobStorageService` (tests may use direct disk for fixtures).
+- Never read or write pipeline blobs except through `BlobStorageService` (S3 keys). FFmpeg steps may use disposable local workspaces under `MEDIA_WORKSPACE_ROOT` via `MediaWorkspaceService`.
 
 ### Logging
 
@@ -158,7 +165,7 @@ These are stored on the video record (Postgres) and passed into the phrase-detec
 
 From `backend/`:
 
-- **Hard rule:** Never write or read files from the disk in a way around the BlobStorageService. The only exception is tests.
+- **Hard rule:** Never read or write pipeline blobs except through `BlobStorageService`. FFmpeg steps use `MediaWorkspaceService` temp dirs. Tests may seed objects via `BlobStorageService`.
 - **Hard rule:** if you see that the changes suggested by the user may require changing the frontend files as well, never change them without asking for the user's permission.
 - **Hard rule:** functions should not receive more than 2 parameters. If the function's logic requires so, pass the paramaters grouped in an object.
 - **Hard rule:** before commit, `npm run lint:fix`

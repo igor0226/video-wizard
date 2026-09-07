@@ -14,6 +14,10 @@ import {
 	startPostgresForTests,
 	stopPostgresForTests,
 } from "../test/postgres-test-setup";
+import {
+	startMinioForTests,
+	stopMinioForTests,
+} from "../test/minio-test-setup";
 import { setupE2eStorage, teardownE2eStorage } from "../test/setup-e2e";
 import type { INestApplication } from "@nestjs/common";
 import type { TestingModule } from "@nestjs/testing";
@@ -24,6 +28,7 @@ describe("AppModule", () => {
 
 	beforeAll(async () => {
 		await startPostgresForTests();
+		await startMinioForTests();
 		await setupE2eStorage();
 		await resetPostgresTables();
 		({ app, moduleRef } = await createTestApp());
@@ -34,6 +39,7 @@ describe("AppModule", () => {
 			await app.close();
 		}
 		await teardownE2eStorage();
+		await stopMinioForTests();
 		await stopPostgresForTests();
 	});
 

@@ -1,6 +1,11 @@
+import { mkdir, rm } from "node:fs/promises";
+import path from "node:path";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BlobStorageService } from "../../storage";
+import type { MediaWorkspace } from "../shared/media-workspace.service";
+import { MediaWorkspaceService } from "../shared/media-workspace.service";
 import {
 	buildExplanationSpeechText,
 	ExplanationTtsService,
@@ -45,18 +50,31 @@ describe("buildExplanationSpeechText", () => {
 describe("ExplanationTtsService", () => {
 	let service: ExplanationTtsService;
 	let blobStorage: BlobStorageService;
+	let workspace: MediaWorkspace;
+	let mediaWorkspace: MediaWorkspaceService;
 
-	beforeEach(() => {
+	beforeEach(async () => {
 		vi.clearAllMocks();
 		process.env.OPENAI_API_KEY = "test-key";
+		await rm("/tmp/workspace", { recursive: true, force: true });
 		speechCreate.mockResolvedValue({
 			arrayBuffer: vi.fn(async () => Uint8Array.from([1, 2, 3]).buffer),
 		});
+		workspace = {
+			dir: "/tmp/workspace",
+			localPath: vi.fn(async (relative: string) => {
+				const absolutePath = path.join("/tmp/workspace", relative);
+				await mkdir(path.dirname(absolutePath), { recursive: true });
+				return absolutePath;
+			}),
+			upload: vi.fn(async () => undefined),
+			download: vi.fn(async () => "/tmp/workspace/english.mp3"),
+			dispose: vi.fn(async () => undefined),
+		} as unknown as MediaWorkspace;
+		mediaWorkspace = {
+			create: vi.fn(async () => workspace),
+		} as unknown as MediaWorkspaceService;
 		blobStorage = {
-			writeUploadFile: vi.fn(async () => undefined),
-			resolveRelativePath: vi.fn(
-				(relativePath: string) => `/tmp/videos/${relativePath}`,
-			),
 			getListenAgainAssetRelativePath: vi.fn(
 				(language: string) => `assets/listen-again/${language}.mp3`,
 			),
@@ -65,6 +83,7 @@ describe("ExplanationTtsService", () => {
 		service = new ExplanationTtsService(
 			{ info: vi.fn() } as never,
 			blobStorage,
+			mediaWorkspace,
 		);
 	});
 
@@ -79,10 +98,10 @@ describe("ExplanationTtsService", () => {
 		});
 
 		expect(result).toEqual({ durationSeconds: 4.2 });
-		expect(blobStorage.writeUploadFile).toHaveBeenCalledWith(
-			outputRelativePath,
-			expect.any(Buffer),
-		);
+		expect(workspace.upload).toHaveBeenCalledWith({
+			localPath: "/tmp/workspace/000.mp3",
+			key: outputRelativePath,
+		});
 		expect(speechCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				model: "gpt-4o-mini-tts",
@@ -106,10 +125,13 @@ describe("ExplanationTtsService", () => {
 	});
 
 	it("synthesizes closing audio when the cached asset is missing", async () => {
-		const result = await service.resolveClosingAudio("English");
+		const result = await service.resolveClosingAudio({
+			explanationLanguage: "English",
+			workspace,
+		});
 
 		expect(result).toEqual({
-			absolutePath: "/tmp/videos/assets/listen-again/english.mp3",
+			absolutePath: "/tmp/workspace/english.mp3",
 			durationSeconds: 4.2,
 		});
 		expect(blobStorage.fileExists).toHaveBeenCalledWith(
@@ -120,22 +142,25 @@ describe("ExplanationTtsService", () => {
 				input: "Let's listen once again!",
 			}),
 		);
-		expect(blobStorage.writeUploadFile).toHaveBeenCalledWith(
-			"assets/listen-again/english.mp3",
-			expect.any(Buffer),
-		);
+		expect(workspace.upload).toHaveBeenCalledWith({
+			localPath: "/tmp/workspace/english.mp3",
+			key: "assets/listen-again/english.mp3",
+		});
 	});
 
 	it("reuses cached closing audio without synthesizing again", async () => {
 		vi.mocked(blobStorage.fileExists).mockResolvedValue(true);
 
-		const result = await service.resolveClosingAudio("English");
+		const result = await service.resolveClosingAudio({
+			explanationLanguage: "English",
+			workspace,
+		});
 
 		expect(result).toEqual({
-			absolutePath: "/tmp/videos/assets/listen-again/english.mp3",
+			absolutePath: "/tmp/workspace/english.mp3",
 			durationSeconds: 4.2,
 		});
 		expect(speechCreate).not.toHaveBeenCalled();
-		expect(blobStorage.writeUploadFile).not.toHaveBeenCalled();
+		expect(workspace.upload).not.toHaveBeenCalled();
 	});
 });

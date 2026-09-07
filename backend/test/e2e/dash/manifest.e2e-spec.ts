@@ -2,11 +2,10 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { seedReadyVideo } from "../../fixtures/seed-ready-video";
-import { getE2eStorageRoot } from "../../setup-e2e";
 import { useE2eApp } from "../helpers/e2e-lifecycle";
 
 describe("DASH manifest (e2e)", () => {
-	const { getApp } = useE2eApp();
+	const { getApp, getBlobStorage } = useE2eApp();
 
 	it("GET /api/dash/:id/manifest.mpd returns 404 for pending videos", async () => {
 		const uploadResponse = await request(getApp().getHttpServer())
@@ -30,7 +29,7 @@ describe("DASH manifest (e2e)", () => {
 	});
 
 	it("GET /api/dash/:id/manifest.mpd serves rewritten manifest for ready videos", async () => {
-		const { videoId } = await seedReadyVideo(getE2eStorageRoot());
+		const { videoId } = await seedReadyVideo(getBlobStorage());
 
 		const response = await request(getApp().getHttpServer()).get(
 			`/api/dash/${videoId}/manifest.mpd`,

@@ -1,29 +1,28 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { BlobStorageService } from "./blob-storage.service";
+import { createS3Client, createS3ConfigProvider } from "./s3-client.provider";
 
 describe("BlobStorageService", () => {
-	let storageRoot: string;
 	let service: BlobStorageService;
+	const testPrefix = `test-${randomUUID()}`;
 
 	beforeEach(async () => {
-		storageRoot = await mkdtemp(path.join(os.tmpdir(), "blob-storage-test-"));
-		process.env.STORAGE_ROOT = storageRoot;
-		service = new BlobStorageService();
+		service = new BlobStorageService(
+			createS3Client(),
+			createS3ConfigProvider(),
+		);
 		await service.ensureLayout();
 	});
 
 	afterEach(async () => {
-		delete process.env.STORAGE_ROOT;
-		await rm(storageRoot, { recursive: true, force: true });
+		await service.ensureCleanDirectory(testPrefix);
 	});
 
 	it("writes and reads text via relative paths", async () => {
-		const relativePath = "explanations/video-1/clips/000.ass";
+		const relativePath = `${testPrefix}/explanations/video-1/clips/000.ass`;
 		const contents = "[Script Info]\nTitle: test\n";
 
 		await service.writeText(relativePath, contents);
@@ -33,42 +32,55 @@ describe("BlobStorageService", () => {
 });
 
 describe("BlobStorageService.clearProcessingArtifactsFromStep", () => {
-	let storageRoot: string;
 	let service: BlobStorageService;
+	const createdVideoIds: string[] = [];
 
 	beforeEach(async () => {
-		storageRoot = await mkdtemp(path.join(os.tmpdir(), "blob-storage-test-"));
-		process.env.STORAGE_ROOT = storageRoot;
-		service = new BlobStorageService();
+		service = new BlobStorageService(
+			createS3Client(),
+			createS3ConfigProvider(),
+		);
 		await service.ensureLayout();
+		createdVideoIds.length = 0;
 	});
 
 	afterEach(async () => {
-		delete process.env.STORAGE_ROOT;
-		await rm(storageRoot, { recursive: true, force: true });
+		for (const videoId of createdVideoIds) {
+			await service.clearProcessingArtifactsFromStep(videoId, "audio_extract");
+		}
 	});
 
 	async function writeStorageFile(
+		videoId: string,
 		relativePath: string,
 		contents: string,
 	): Promise<void> {
-		const absolutePath = service.resolveRelativePath(relativePath);
-		await mkdir(path.dirname(absolutePath), { recursive: true });
-		await writeFile(absolutePath, contents, "utf8");
+		createdVideoIds.push(videoId);
+		await service.writeText(relativePath, contents);
 	}
 
 	it("keeps phrases.json when retrying from generating_clips", async () => {
-		const videoId = "video-1";
+		const videoId = randomUUID();
 		await writeStorageFile(
+			videoId,
 			`explanations/${videoId}/phrases.json`,
 			'{"phrases":[]}',
 		);
 		await writeStorageFile(
+			videoId,
 			`explanations/${videoId}/clips.json`,
 			'{"clips":[]}',
 		);
-		await writeStorageFile(`explanations/${videoId}/clips/000.mp4`, "clip");
-		await writeStorageFile(`enriched/${videoId}/output.mp4`, "enriched");
+		await writeStorageFile(
+			videoId,
+			`explanations/${videoId}/clips/000.mp4`,
+			"clip",
+		);
+		await writeStorageFile(
+			videoId,
+			`enriched/${videoId}/output.mp4`,
+			"enriched",
+		);
 
 		await service.clearProcessingArtifactsFromStep(videoId, "generating_clips");
 
@@ -87,12 +99,14 @@ describe("BlobStorageService.clearProcessingArtifactsFromStep", () => {
 	});
 
 	it("removes the entire explanations directory when retrying from detecting_phrases", async () => {
-		const videoId = "video-2";
+		const videoId = randomUUID();
 		await writeStorageFile(
+			videoId,
 			`explanations/${videoId}/phrases.json`,
 			'{"phrases":[]}',
 		);
 		await writeStorageFile(
+			videoId,
 			`explanations/${videoId}/clips.json`,
 			'{"clips":[]}',
 		);
@@ -111,17 +125,23 @@ describe("BlobStorageService.clearProcessingArtifactsFromStep", () => {
 	});
 
 	it("removes only enriched and dash when retrying from composing_video", async () => {
-		const videoId = "video-3";
+		const videoId = randomUUID();
 		await writeStorageFile(
+			videoId,
 			`explanations/${videoId}/phrases.json`,
 			'{"phrases":[]}',
 		);
 		await writeStorageFile(
+			videoId,
 			`explanations/${videoId}/clips.json`,
 			'{"clips":[]}',
 		);
-		await writeStorageFile(`enriched/${videoId}/output.mp4`, "enriched");
-		await writeStorageFile(`dash/${videoId}/manifest.mpd`, "mpd");
+		await writeStorageFile(
+			videoId,
+			`enriched/${videoId}/output.mp4`,
+			"enriched",
+		);
+		await writeStorageFile(videoId, `dash/${videoId}/manifest.mpd`, "mpd");
 
 		await service.clearProcessingArtifactsFromStep(videoId, "composing_video");
 

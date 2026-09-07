@@ -7,6 +7,7 @@ import OpenAI from "openai";
 
 import { BlobStorageService, type VideoRecord } from "../../storage";
 import type { ExtractAudioResult } from "../audio-extract/ffmpeg-audio.service";
+import { MediaWorkspaceService } from "../shared/media-workspace.service";
 import {
 	normalizeFfmpegError,
 	runProcess,
@@ -35,6 +36,7 @@ export class WhisperTranscriptionService {
 		@InjectPinoLogger(WhisperTranscriptionService.name)
 		private readonly logger: PinoLogger,
 		private readonly blobStorage: BlobStorageService,
+		private readonly mediaWorkspace: MediaWorkspaceService,
 	) {}
 
 	async transcribe(input: TranscribeInput): Promise<TranscribeResult> {
@@ -46,36 +48,51 @@ export class WhisperTranscriptionService {
 
 		const client = this.getOpenAiClient(apiKey);
 		const audioRelativePath = audioResult.audioRelativePath;
-		const audioAbsolutePath =
-			this.blobStorage.resolveRelativePath(audioRelativePath);
-		const audioSizeBytes =
-			await this.blobStorage.getFileSizeBytes(audioRelativePath);
-
-		this.logger.info(
-			{ videoId: video.id, audioSizeBytes },
-			"transcription-start",
+		const workspace = await this.mediaWorkspace.create(
+			`transcribe-${video.id}`,
 		);
 
-		const transcript =
-			audioSizeBytes <= WHISPER_MAX_BYTES
-				? await this.transcribeFile(client, audioAbsolutePath)
-				: await this.transcribeLargeFile(client, video.id, audioAbsolutePath);
+		try {
+			const audioAbsolutePath = await workspace.download({
+				key: audioRelativePath,
+				relative: path.basename(audioRelativePath),
+			});
+			const audioSizeBytes =
+				await workspace.getLocalFileSizeBytes(audioAbsolutePath);
 
-		const transcriptRelativePath = this.blobStorage.getTranscriptRelativePath(
-			video.id,
-		);
-		await this.blobStorage.writeJson(transcriptRelativePath, transcript);
+			this.logger.info(
+				{ videoId: video.id, audioSizeBytes },
+				"transcription-start",
+			);
 
-		this.logger.info(
-			{
-				videoId: video.id,
-				wordCount: transcript.words?.length ?? 0,
-				duration: transcript.duration,
-			},
-			"transcription-success",
-		);
+			const transcript =
+				audioSizeBytes <= WHISPER_MAX_BYTES
+					? await this.transcribeFile(client, audioAbsolutePath)
+					: await this.transcribeLargeFile({
+							client,
+							videoId: video.id,
+							audioAbsolutePath,
+							workspace,
+						});
 
-		return { transcriptRelativePath };
+			const transcriptRelativePath = this.blobStorage.getTranscriptRelativePath(
+				video.id,
+			);
+			await this.blobStorage.writeJson(transcriptRelativePath, transcript);
+
+			this.logger.info(
+				{
+					videoId: video.id,
+					wordCount: transcript.words?.length ?? 0,
+					duration: transcript.duration,
+				},
+				"transcription-success",
+			);
+
+			return { transcriptRelativePath };
+		} finally {
+			await workspace.dispose();
+		}
 	}
 
 	private getOpenAiClient(apiKey: string): OpenAI {
@@ -99,13 +116,15 @@ export class WhisperTranscriptionService {
 		return response as WhisperTranscript;
 	}
 
-	private async transcribeLargeFile(
-		client: OpenAI,
-		videoId: string,
-		audioAbsolutePath: string,
-	): Promise<WhisperTranscript> {
-		const durationSeconds =
-			await this.getAudioDurationSeconds(audioAbsolutePath);
+	private async transcribeLargeFile(input: {
+		client: OpenAI;
+		videoId: string;
+		audioAbsolutePath: string;
+		workspace: Awaited<ReturnType<MediaWorkspaceService["create"]>>;
+	}): Promise<WhisperTranscript> {
+		const durationSeconds = await this.getAudioDurationSeconds(
+			input.audioAbsolutePath,
+		);
 		const chunkCount = Math.ceil(durationSeconds / CHUNK_DURATION_SECONDS);
 		const chunks: WhisperTranscript[] = [];
 		const offsets: number[] = [];
@@ -120,15 +139,11 @@ export class WhisperTranscriptionService {
 				break;
 			}
 
-			const chunkRelativePath = path.posix.join(
-				this.blobStorage.getAudioDirectoryRelativePath(videoId),
-				`chunk-${String(index + 1).padStart(3, "0")}.mp3`,
-			);
-			const chunkAbsolutePath =
-				this.blobStorage.resolveRelativePath(chunkRelativePath);
+			const chunkFileName = `chunk-${String(index + 1).padStart(3, "0")}.mp3`;
+			const chunkAbsolutePath = await input.workspace.localPath(chunkFileName);
 
 			await this.extractAudioChunk({
-				sourceAbsolutePath: audioAbsolutePath,
+				sourceAbsolutePath: input.audioAbsolutePath,
 				outputAbsolutePath: chunkAbsolutePath,
 				startSeconds,
 				durationSeconds: chunkDurationSeconds,
@@ -136,7 +151,7 @@ export class WhisperTranscriptionService {
 
 			this.logger.info(
 				{
-					videoId,
+					videoId: input.videoId,
 					chunkIndex: index + 1,
 					chunkCount,
 					startSeconds,
@@ -146,7 +161,7 @@ export class WhisperTranscriptionService {
 			);
 
 			const chunkTranscript = await this.transcribeFile(
-				client,
+				input.client,
 				chunkAbsolutePath,
 			);
 			chunks.push(chunkTranscript);

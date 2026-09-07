@@ -1,15 +1,11 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { seedReadyVideo } from "../../fixtures/seed-ready-video";
-import { getE2eStorageRoot } from "../../setup-e2e";
 import { useE2eApp } from "../helpers/e2e-lifecycle";
 
 describe("Videos playback phrases (e2e)", () => {
-	const { getApp } = useE2eApp();
+	const { getApp, getBlobStorage } = useE2eApp();
 
 	it("GET /api/videos/:id/playback-phrases returns 404 for unknown video", async () => {
 		const response = await request(getApp().getHttpServer()).get(
@@ -20,7 +16,7 @@ describe("Videos playback phrases (e2e)", () => {
 	});
 
 	it("GET /api/videos/:id/playback-phrases returns empty phrases when not composed", async () => {
-		const { videoId } = await seedReadyVideo(getE2eStorageRoot());
+		const { videoId } = await seedReadyVideo(getBlobStorage());
 
 		const response = await request(getApp().getHttpServer()).get(
 			`/api/videos/${videoId}/playback-phrases`,
@@ -31,7 +27,8 @@ describe("Videos playback phrases (e2e)", () => {
 	});
 
 	it("GET /api/videos/:id/playback-phrases returns stored playback phrases", async () => {
-		const { videoId } = await seedReadyVideo(getE2eStorageRoot());
+		const blobStorage = getBlobStorage();
+		const { videoId } = await seedReadyVideo(blobStorage);
 		const playbackPhrases = {
 			phrases: [
 				{
@@ -43,16 +40,9 @@ describe("Videos playback phrases (e2e)", () => {
 				},
 			],
 		};
-		const enrichedDirectory = path.join(
-			getE2eStorageRoot(),
-			"enriched",
-			videoId,
-		);
-		await mkdir(enrichedDirectory, { recursive: true });
-		await writeFile(
-			path.join(enrichedDirectory, "playback-phrases.json"),
-			JSON.stringify(playbackPhrases, null, 2),
-			"utf8",
+		await blobStorage.writeJson(
+			blobStorage.getPlaybackPhrasesRelativePath(videoId),
+			playbackPhrases,
 		);
 
 		const response = await request(getApp().getHttpServer()).get(

@@ -83,7 +83,7 @@ export function runProcessWithStderr(
 export function normalizeFfmpegError(error: unknown): Error {
 	const message =
 		error instanceof Error ? error.message : "Unknown ffmpeg failure";
-	if (/ENOENT|not found/i.test(message)) {
+	if (/spawn ffmpeg ENOENT|ffmpeg: not found/i.test(message)) {
 		return new Error("FFmpeg is not installed or not available in PATH");
 	}
 	return new Error(`FFmpeg failed: ${message}`);

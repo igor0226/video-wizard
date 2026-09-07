@@ -6,7 +6,8 @@
 	"scripts": {
 		"prepare": "husky",
 		"dev": "docker compose up",
-		"dev:rebuild": "docker compose up --build"
+		"dev:rebuild": "docker compose up --build",
+		"dev:clean": "docker compose down --remove-orphans"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^21.2.1",

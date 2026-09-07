@@ -18,6 +18,8 @@ import {
 	probeMediaDurationSeconds,
 	probeVideoFile,
 } from "../shared/ffmpeg-probe";
+import { MediaWorkspaceService } from "../shared/media-workspace.service";
+import { downloadSourceVideoToWorkspace } from "../shared/utils/download-source-video";
 import { normalizeFfmpegError, runProcess } from "../shared/ffmpeg-process";
 
 import { buildAudioFadeOutFilter } from "./utils/audio-fade-out";
@@ -37,9 +39,9 @@ type ComposeContext = {
 	video: VideoRecord;
 	enrichedRelativePath: string;
 	enrichedAbsolutePath: string;
-	enrichedDirectoryRelativePath: string;
 	sourceAbsolutePath: string;
 	manifest: ExplanationClipsManifest;
+	workspace: Awaited<ReturnType<MediaWorkspaceService["create"]>>;
 };
 
 type VideoProbe = Awaited<ReturnType<typeof probeVideoFile>>;
@@ -50,22 +52,35 @@ export class FfmpegComposeService {
 		@InjectPinoLogger(FfmpegComposeService.name)
 		private readonly logger: PinoLogger,
 		private readonly blobStorage: BlobStorageService,
+		private readonly mediaWorkspace: MediaWorkspaceService,
 	) {}
 
 	async composeVideo(input: ComposeVideoInput): Promise<ComposeVideoResult> {
-		const context = await this.prepareComposeContext(input);
+		const workspace = await this.mediaWorkspace.create(
+			`compose-${input.video.id}`,
+		);
+		try {
+			const context = await this.prepareComposeContext({
+				...input,
+				workspace,
+			});
 
-		if (context.manifest.clips.length === 0) {
-			return this.composeWithoutClips(context);
+			if (context.manifest.clips.length === 0) {
+				return await this.composeWithoutClips(context);
+			}
+
+			return await this.composeWithClips(context);
+		} finally {
+			await workspace.dispose();
 		}
-
-		return this.composeWithClips(context);
 	}
 
 	private async prepareComposeContext(
-		input: ComposeVideoInput,
+		input: ComposeVideoInput & {
+			workspace: Awaited<ReturnType<MediaWorkspaceService["create"]>>;
+		},
 	): Promise<ComposeContext> {
-		const { video, clipsManifestRelativePath } = input;
+		const { video, clipsManifestRelativePath, workspace } = input;
 		await this.blobStorage.ensureLayout();
 
 		const enrichedDirectoryRelativePath =
@@ -75,16 +90,29 @@ export class FfmpegComposeService {
 		const enrichedRelativePath = this.blobStorage.getEnrichedVideoRelativePath(
 			video.id,
 		);
+		const sourceAbsolutePath = await downloadSourceVideoToWorkspace({
+			blobStorage: this.blobStorage,
+			workspace,
+			video,
+		});
+		const manifest = await this.readClipsManifest(clipsManifestRelativePath);
+
+		for (const clip of manifest.clips) {
+			await workspace.download({
+				key: clip.relativePath,
+				relative: path.join("clips", path.basename(clip.relativePath)),
+			});
+		}
 
 		return {
 			video,
 			enrichedRelativePath,
-			enrichedAbsolutePath:
-				this.blobStorage.resolveRelativePath(enrichedRelativePath),
-			enrichedDirectoryRelativePath,
-			sourceAbsolutePath:
-				this.blobStorage.getStoragePathsForVideo(video).sourceAbsolutePath,
-			manifest: await this.readClipsManifest(clipsManifestRelativePath),
+			enrichedAbsolutePath: await workspace.localPath(
+				path.basename(enrichedRelativePath),
+			),
+			sourceAbsolutePath,
+			manifest,
+			workspace,
 		};
 	}
 
@@ -104,6 +132,10 @@ export class FfmpegComposeService {
 			enrichedAbsolutePath: context.enrichedAbsolutePath,
 			videoId: context.video.id,
 		});
+		await context.workspace.upload({
+			localPath: context.enrichedAbsolutePath,
+			key: context.enrichedRelativePath,
+		});
 		await this.writePlaybackPhrases({ videoId: context.video.id, phrases: [] });
 		return { enrichedRelativePath: context.enrichedRelativePath };
 	}
@@ -113,7 +145,7 @@ export class FfmpegComposeService {
 	): Promise<ComposeVideoResult> {
 		const compositionPlan = await this.buildCompositionPlan(context);
 		const partsDirectoryAbsolutePath = await this.preparePartsDirectory(
-			context.enrichedDirectoryRelativePath,
+			context.workspace,
 		);
 		const partPaths = await this.renderCompositionParts({
 			context,
@@ -127,6 +159,10 @@ export class FfmpegComposeService {
 			partPaths,
 			partsDirectoryAbsolutePath,
 			enrichedAbsolutePath: context.enrichedAbsolutePath,
+		});
+		await context.workspace.upload({
+			localPath: context.enrichedAbsolutePath,
+			key: context.enrichedRelativePath,
 		});
 		await this.persistPlaybackPhrasesFromParts({
 			videoId: context.video.id,
@@ -155,17 +191,11 @@ export class FfmpegComposeService {
 	}
 
 	private async preparePartsDirectory(
-		enrichedDirectoryRelativePath: string,
+		workspace: Awaited<ReturnType<MediaWorkspaceService["create"]>>,
 	): Promise<string> {
-		const partsDirectoryRelativePath = path.posix.join(
-			enrichedDirectoryRelativePath,
-			"parts",
-		);
-		await this.blobStorage.ensureCleanDirectory(partsDirectoryRelativePath);
-		return path.join(
-			this.blobStorage.resolveRelativePath(enrichedDirectoryRelativePath),
-			"parts",
-		);
+		return workspace.localPath("parts/part-000.mp4").then((firstPartPath) => {
+			return path.dirname(firstPartPath);
+		});
 	}
 
 	private async renderCompositionParts(input: {
@@ -199,8 +229,10 @@ export class FfmpegComposeService {
 			}
 
 			await this.normalizeClipPart({
-				clipAbsolutePath: this.blobStorage.resolveRelativePath(
-					part.clip.relativePath,
+				clipAbsolutePath: path.join(
+					input.context.workspace.dir,
+					"clips",
+					path.basename(part.clip.relativePath),
 				),
 				outputAbsolutePath: partAbsolutePath,
 				probe: input.probe,

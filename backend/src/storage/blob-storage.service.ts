@@ -1,191 +1,264 @@
-import {
-	mkdir,
-	readdir,
-	readFile,
-	rm,
-	stat,
-	writeFile,
-} from "node:fs/promises";
-import path from "node:path";
+import type { Readable } from "node:stream";
 
-import { Injectable } from "@nestjs/common";
+import {
+	CreateBucketCommand,
+	DeleteObjectsCommand,
+	GetObjectCommand,
+	HeadBucketCommand,
+	HeadObjectCommand,
+	ListObjectsV2Command,
+	PutObjectCommand,
+	S3Client,
+} from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
+import { Inject, Injectable } from "@nestjs/common";
 
 import type { ProcessingStep, VideoRecord } from "./types";
-import { resolveStorageRoot } from "./utils/resolve-storage-root";
+import { normalizeObjectKey } from "./utils/normalize-object-key";
+import { S3_CLIENT, S3_CONFIG } from "./s3-client.provider";
+import type { S3Config } from "./utils/resolve-s3-config";
 
-const UPLOADS_DIR = "uploads";
 const DASH_DIR = "dash";
-const RECORDS_DIR = "records";
 const AUDIO_DIR = "audio";
 const TRANSCRIPTS_DIR = "transcripts";
 const EXPLANATIONS_DIR = "explanations";
 const ENRICHED_DIR = "enriched";
-const HISTORY_DIR = "history";
 const ASSETS_DIR = "assets";
 const LISTEN_AGAIN_DIR = "listen-again";
+const MULTIPART_THRESHOLD_BYTES = 5 * 1024 * 1024;
 
-async function ensureDir(dirPath: string): Promise<void> {
-	await mkdir(dirPath, { recursive: true });
+function isNotFoundError(error: unknown): boolean {
+	if (!error || typeof error !== "object") {
+		return false;
+	}
+	const maybeError = error as {
+		name?: string;
+		$metadata?: { httpStatusCode?: number };
+	};
+	return (
+		maybeError.name === "NotFound" ||
+		maybeError.name === "NoSuchKey" ||
+		maybeError.$metadata?.httpStatusCode === 404
+	);
 }
 
 @Injectable()
 export class BlobStorageService {
-	getStorageRoot(): string {
-		return resolveStorageRoot();
+	constructor(
+		@Inject(S3_CLIENT) private readonly s3Client: S3Client,
+		@Inject(S3_CONFIG) private readonly s3Config: S3Config,
+	) {}
+
+	getBucketName(): string {
+		return this.s3Config.bucket;
 	}
 
 	async ensureLayout(): Promise<void> {
-		const storageRoot = this.getStorageRoot();
-		await Promise.all([
-			ensureDir(path.join(storageRoot, UPLOADS_DIR)),
-			ensureDir(path.join(storageRoot, DASH_DIR)),
-			ensureDir(path.join(storageRoot, RECORDS_DIR)),
-			ensureDir(path.join(storageRoot, AUDIO_DIR)),
-			ensureDir(path.join(storageRoot, TRANSCRIPTS_DIR)),
-			ensureDir(path.join(storageRoot, EXPLANATIONS_DIR)),
-			ensureDir(path.join(storageRoot, ENRICHED_DIR)),
-			ensureDir(path.join(storageRoot, HISTORY_DIR)),
-			ensureDir(path.join(storageRoot, ASSETS_DIR, LISTEN_AGAIN_DIR)),
-		]);
+		try {
+			await this.s3Client.send(
+				new HeadBucketCommand({ Bucket: this.s3Config.bucket }),
+			);
+		} catch {
+			await this.s3Client.send(
+				new CreateBucketCommand({ Bucket: this.s3Config.bucket }),
+			);
+		}
 	}
 
 	async writeUploadFile(
 		relativePath: string,
 		fileBuffer: Buffer,
 	): Promise<void> {
-		const absolutePath = this.resolveRelativePath(relativePath);
-		await ensureDir(path.dirname(absolutePath));
-		await writeFile(absolutePath, fileBuffer);
+		const key = normalizeObjectKey(relativePath);
+		if (fileBuffer.length >= MULTIPART_THRESHOLD_BYTES) {
+			const upload = new Upload({
+				client: this.s3Client,
+				params: {
+					Bucket: this.s3Config.bucket,
+					Key: key,
+					Body: fileBuffer,
+				},
+			});
+			await upload.done();
+			return;
+		}
+
+		await this.s3Client.send(
+			new PutObjectCommand({
+				Bucket: this.s3Config.bucket,
+				Key: key,
+				Body: fileBuffer,
+			}),
+		);
 	}
 
 	async readText(relativePath: string): Promise<string> {
-		const absolutePath = this.resolveRelativePath(relativePath);
-		return readFile(absolutePath, "utf8");
+		const buffer = await this.readBytes(relativePath);
+		return buffer.toString("utf8");
 	}
 
 	async writeText(relativePath: string, contents: string): Promise<void> {
-		const absolutePath = this.resolveRelativePath(relativePath);
-		await ensureDir(path.dirname(absolutePath));
-		await writeFile(absolutePath, contents, "utf8");
+		await this.writeUploadFile(relativePath, Buffer.from(contents, "utf8"));
 	}
 
 	async readBytes(relativePath: string): Promise<Buffer> {
-		const absolutePath = this.resolveRelativePath(relativePath);
-		return readFile(absolutePath);
+		const response = await this.s3Client.send(
+			new GetObjectCommand({
+				Bucket: this.s3Config.bucket,
+				Key: normalizeObjectKey(relativePath),
+			}),
+		);
+		if (!response.Body) {
+			throw new Error(`Object not found: ${relativePath}`);
+		}
+		return Buffer.from(await response.Body.transformToByteArray());
 	}
 
 	async writeJson(relativePath: string, data: unknown): Promise<void> {
-		const absolutePath = this.resolveRelativePath(relativePath);
-		await ensureDir(path.dirname(absolutePath));
-		await writeFile(absolutePath, JSON.stringify(data, null, 2), "utf8");
+		await this.writeText(relativePath, JSON.stringify(data, null, 2));
 	}
 
 	async getFileSizeBytes(relativePath: string): Promise<number> {
-		const absolutePath = this.resolveRelativePath(relativePath);
-		const entry = await stat(absolutePath);
-		return entry.size;
-	}
-
-	resolveRelativePath(relativePath: string): string {
-		const storageRoot = this.getStorageRoot();
-		const normalized = path.normalize(relativePath);
-		const absolutePath = path.join(storageRoot, normalized);
-		const normalizedRoot = `${path.normalize(storageRoot)}${path.sep}`;
-		if (!path.normalize(absolutePath).startsWith(normalizedRoot)) {
-			throw new Error("Invalid storage path");
-		}
-		return absolutePath;
-	}
-
-	async ensureCleanDirectory(relativePath: string): Promise<string> {
-		const absolutePath = this.resolveRelativePath(relativePath);
-		await rm(absolutePath, { recursive: true, force: true });
-		await ensureDir(absolutePath);
-		return absolutePath;
-	}
-
-	async listFiles(relativePath: string): Promise<string[]> {
-		const absolutePath = this.resolveRelativePath(relativePath);
-		const entries = await readdir(absolutePath, { withFileTypes: true });
-		return entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
+		const response = await this.s3Client.send(
+			new HeadObjectCommand({
+				Bucket: this.s3Config.bucket,
+				Key: normalizeObjectKey(relativePath),
+			}),
+		);
+		return response.ContentLength ?? 0;
 	}
 
 	async fileExists(relativePath: string): Promise<boolean> {
-		const absolutePath = this.resolveRelativePath(relativePath);
 		try {
-			const entry = await stat(absolutePath);
-			return entry.isFile();
-		} catch {
-			return false;
+			await this.s3Client.send(
+				new HeadObjectCommand({
+					Bucket: this.s3Config.bucket,
+					Key: normalizeObjectKey(relativePath),
+				}),
+			);
+			return true;
+		} catch (error) {
+			if (isNotFoundError(error)) {
+				return false;
+			}
+			throw error;
 		}
 	}
 
-	getStoragePathsForVideo(video: VideoRecord): {
-		sourceAbsolutePath: string;
-		dashAbsolutePath: string;
-		manifestAbsolutePath: string;
-	} {
-		const dashRelativeManifest = path.posix.join(
-			video.dashRelativePath,
-			video.manifestFileName,
+	async listFiles(relativePath: string): Promise<string[]> {
+		const prefix = this.toPrefix(relativePath);
+		const response = await this.s3Client.send(
+			new ListObjectsV2Command({
+				Bucket: this.s3Config.bucket,
+				Prefix: prefix,
+				Delimiter: "/",
+			}),
 		);
-		return {
-			sourceAbsolutePath: this.resolveRelativePath(video.sourceRelativePath),
-			dashAbsolutePath: this.resolveRelativePath(video.dashRelativePath),
-			manifestAbsolutePath: this.resolveRelativePath(dashRelativeManifest),
-		};
+		return (response.Contents ?? [])
+			.map((entry) => entry.Key ?? "")
+			.filter((key) => key && !key.endsWith("/"))
+			.map((key) => key.slice(prefix.length));
+	}
+
+	async listObjectKeys(prefix: string): Promise<string[]> {
+		const normalizedPrefix = this.toPrefix(prefix);
+		const keys: string[] = [];
+		let continuationToken: string | undefined;
+
+		do {
+			const response = await this.s3Client.send(
+				new ListObjectsV2Command({
+					Bucket: this.s3Config.bucket,
+					Prefix: normalizedPrefix,
+					ContinuationToken: continuationToken,
+				}),
+			);
+			for (const entry of response.Contents ?? []) {
+				if (entry.Key && !entry.Key.endsWith("/")) {
+					keys.push(entry.Key);
+				}
+			}
+			continuationToken = response.NextContinuationToken;
+		} while (continuationToken);
+
+		return keys;
+	}
+
+	async getObjectStream(relativePath: string): Promise<Readable> {
+		const response = await this.s3Client.send(
+			new GetObjectCommand({
+				Bucket: this.s3Config.bucket,
+				Key: normalizeObjectKey(relativePath),
+			}),
+		);
+		if (!response.Body) {
+			throw new Error(`Object not found: ${relativePath}`);
+		}
+		return response.Body as Readable;
+	}
+
+	async ensureCleanDirectory(relativePath: string): Promise<void> {
+		await this.deletePrefix(relativePath);
 	}
 
 	getAudioRelativePath(videoId: string): string {
-		return path.posix.join(AUDIO_DIR, videoId, "track.mp3");
+		return `${AUDIO_DIR}/${videoId}/track.mp3`;
+	}
+
+	getUploadDirectoryRelativePath(videoId: string): string {
+		return `uploads/${videoId}`;
 	}
 
 	getAudioDirectoryRelativePath(videoId: string): string {
-		return path.posix.join(AUDIO_DIR, videoId);
+		return `${AUDIO_DIR}/${videoId}`;
 	}
 
 	getTranscriptRelativePath(videoId: string): string {
-		return path.posix.join(TRANSCRIPTS_DIR, videoId, "transcript.json");
+		return `${TRANSCRIPTS_DIR}/${videoId}/transcript.json`;
 	}
 
 	getTranscriptDirectoryRelativePath(videoId: string): string {
-		return path.posix.join(TRANSCRIPTS_DIR, videoId);
+		return `${TRANSCRIPTS_DIR}/${videoId}`;
 	}
 
 	getPhrasesRelativePath(videoId: string): string {
-		return path.posix.join(EXPLANATIONS_DIR, videoId, "phrases.json");
+		return `${EXPLANATIONS_DIR}/${videoId}/phrases.json`;
 	}
 
 	getExplanationsDirectoryRelativePath(videoId: string): string {
-		return path.posix.join(EXPLANATIONS_DIR, videoId);
+		return `${EXPLANATIONS_DIR}/${videoId}`;
 	}
 
 	getClipsManifestRelativePath(videoId: string): string {
-		return path.posix.join(EXPLANATIONS_DIR, videoId, "clips.json");
+		return `${EXPLANATIONS_DIR}/${videoId}/clips.json`;
 	}
 
 	getClipsDirectoryRelativePath(videoId: string): string {
-		return path.posix.join(EXPLANATIONS_DIR, videoId, "clips");
+		return `${EXPLANATIONS_DIR}/${videoId}/clips`;
 	}
 
 	getEnrichedDirectoryRelativePath(videoId: string): string {
-		return path.posix.join(ENRICHED_DIR, videoId);
+		return `${ENRICHED_DIR}/${videoId}`;
 	}
 
 	getEnrichedVideoRelativePath(videoId: string): string {
-		return path.posix.join(ENRICHED_DIR, videoId, "output.mp4");
+		return `${ENRICHED_DIR}/${videoId}/output.mp4`;
 	}
 
 	getPlaybackPhrasesRelativePath(videoId: string): string {
-		return path.posix.join(ENRICHED_DIR, videoId, "playback-phrases.json");
+		return `${ENRICHED_DIR}/${videoId}/playback-phrases.json`;
 	}
 
 	getListenAgainAssetRelativePath(language: string): string {
-		return path.posix.join(ASSETS_DIR, LISTEN_AGAIN_DIR, `${language}.mp3`);
+		return `${ASSETS_DIR}/${LISTEN_AGAIN_DIR}/${language}.mp3`;
 	}
 
 	getDashDirectoryRelativePath(videoId: string): string {
-		return path.posix.join(DASH_DIR, videoId);
+		return `${DASH_DIR}/${videoId}`;
+	}
+
+	getDashManifestRelativePath(video: VideoRecord): string {
+		return `${video.dashRelativePath}/${video.manifestFileName}`;
 	}
 
 	async clearProcessingArtifactsFromStep(
@@ -233,15 +306,56 @@ export class BlobStorageService {
 		}
 
 		await Promise.all([
-			...directories.map((relativePath) =>
-				rm(this.resolveRelativePath(relativePath), {
-					recursive: true,
-					force: true,
-				}),
-			),
-			...files.map((relativePath) =>
-				rm(this.resolveRelativePath(relativePath), { force: true }),
-			),
+			...directories.map((relativePath) => this.deletePrefix(relativePath)),
+			...files.map((relativePath) => this.deleteObject(relativePath)),
 		]);
+	}
+
+	private toPrefix(relativePath: string): string {
+		const key = normalizeObjectKey(relativePath);
+		return key.endsWith("/") ? key : `${key}/`;
+	}
+
+	private async deleteObject(relativePath: string): Promise<void> {
+		if (!(await this.fileExists(relativePath))) {
+			return;
+		}
+		await this.s3Client.send(
+			new DeleteObjectsCommand({
+				Bucket: this.s3Config.bucket,
+				Delete: {
+					Objects: [{ Key: normalizeObjectKey(relativePath) }],
+				},
+			}),
+		);
+	}
+
+	private async deletePrefix(relativePath: string): Promise<void> {
+		const prefix = this.toPrefix(relativePath);
+		let continuationToken: string | undefined;
+
+		do {
+			const response = await this.s3Client.send(
+				new ListObjectsV2Command({
+					Bucket: this.s3Config.bucket,
+					Prefix: prefix,
+					ContinuationToken: continuationToken,
+				}),
+			);
+			const objects = (response.Contents ?? [])
+				.filter((entry) => entry.Key)
+				.map((entry) => ({ Key: entry.Key as string }));
+
+			if (objects.length > 0) {
+				await this.s3Client.send(
+					new DeleteObjectsCommand({
+						Bucket: this.s3Config.bucket,
+						Delete: { Objects: objects },
+					}),
+				);
+			}
+
+			continuationToken = response.NextContinuationToken;
+		} while (continuationToken);
 	}
 }

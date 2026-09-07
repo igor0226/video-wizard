@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import type { BlobStorageService } from "../../src/storage";
 import type { VideoRecord } from "../../src/storage/types";
 import { seedVideoMetadata } from "./seed-video-db";
 
@@ -11,7 +11,7 @@ export type SeededFailedVideo = {
 };
 
 export async function seedFailedVideo(
-	storageRoot: string,
+	blobStorage: BlobStorageService,
 	options?: { title?: string },
 ): Promise<SeededFailedVideo> {
 	const videoId = randomUUID();
@@ -71,30 +71,17 @@ export async function seedFailedVideo(
 		updatedAt: nowIso,
 	};
 
-	await mkdir(path.dirname(path.join(storageRoot, sourceRelativePath)), {
-		recursive: true,
-	});
-	await mkdir(path.dirname(path.join(storageRoot, audioRelativePath)), {
-		recursive: true,
-	});
-	await mkdir(path.dirname(path.join(storageRoot, transcriptRelativePath)), {
-		recursive: true,
-	});
-
 	await seedVideoMetadata({ record, history });
 
-	await writeFile(
-		path.join(storageRoot, sourceRelativePath),
+	await blobStorage.writeUploadFile(
+		sourceRelativePath,
 		Buffer.from("mock-upload-bytes"),
 	);
-	await writeFile(
-		path.join(storageRoot, audioRelativePath),
+	await blobStorage.writeUploadFile(
+		audioRelativePath,
 		Buffer.from("mock-audio-bytes"),
 	);
-	await writeFile(
-		path.join(storageRoot, transcriptRelativePath),
-		Buffer.from("{}"),
-	);
+	await blobStorage.writeText(transcriptRelativePath, "{}");
 
 	return { videoId, title };
 }

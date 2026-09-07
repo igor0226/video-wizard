@@ -20,21 +20,22 @@ A user uploads a video and selects the video language and explanation language. 
 
 - `frontend/` — Next.js UI (own `package.json`)
 - `backend/` — Nest.js API + processing worker (own `package.json`)
-- `videos/` — local filesystem storage (repo root)
+- `videos/` — legacy on-disk data (optional one-time migration source into MinIO)
 - `compose.yaml` — Docker Compose dev stack (frontend + backend, hot reload)
 - Root `package.json` — husky/commitlint and `npm run dev` (`docker compose up`)
 
 ### Artifacts
 
-Target on-disk outputs under `videos/` (exact folder names may evolve during implementation):
+Target blob outputs in S3/MinIO (same key layout as the former repo-root `videos/` tree):
 
-- `videos/uploads/<videoId>/` — source upload
-- `videos/transcripts/<videoId>/transcript.json` — timed transcript (word/segment timestamps)
-- `videos/explanations/<videoId>/phrases.json` — detected tricky phrases (word indexes + explanations)
-- `videos/explanations/<videoId>/` — future TTS audio clips, slide assets
-- `videos/enriched/<videoId>/` — composed destination video (pre-DASH)
-- `videos/dash/<videoId>/` — streamable DASH output (enriched video, not raw source)
-- `videos/records/<videoId>.json` — metadata including `sourceLanguage`, `explanationLanguage`, `languageLevel`
+- `uploads/<videoId>/` — source upload
+- `transcripts/<videoId>/transcript.json` — timed transcript (word/segment timestamps)
+- `explanations/<videoId>/phrases.json` — detected tricky phrases (word indexes + explanations)
+- `explanations/<videoId>/` — TTS audio clips, slide assets
+- `enriched/<videoId>/` — composed destination video (pre-DASH)
+- `dash/<videoId>/` — streamable DASH output (enriched video, not raw source)
+
+Video metadata lives in PostgreSQL. Legacy `videos/records/*.json` may still exist locally for one-time backfill only.
 
 ## Product flow
 
