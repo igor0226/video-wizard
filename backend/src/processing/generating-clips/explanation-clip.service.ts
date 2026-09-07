@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { Injectable } from "@nestjs/common";
@@ -36,6 +37,9 @@ import {
 	probeLoudnormStats,
 	resolveTargetIntegratedLufs,
 } from "../shared/ffmpeg-loudness";
+import type { MediaWorkspace } from "../shared/media-workspace.service";
+import { MediaWorkspaceService } from "../shared/media-workspace.service";
+import { downloadSourceVideoToWorkspace } from "../shared/utils/download-source-video";
 import { normalizeFfmpegError, runProcess } from "../shared/ffmpeg-process";
 import { mapWithConcurrency } from "../shared/map-with-concurrency";
 import type { DetectedPhrase } from "../detecting-phrases/phrase-detection.service";
@@ -88,6 +92,7 @@ export class ExplanationClipService {
 		private readonly logger: PinoLogger,
 		private readonly blobStorage: BlobStorageService,
 		private readonly explanationTtsService: ExplanationTtsService,
+		private readonly mediaWorkspace: MediaWorkspaceService,
 	) {}
 
 	async generateClips(input: GenerateClipsInput): Promise<GenerateClipsResult> {
@@ -123,49 +128,66 @@ export class ExplanationClipService {
 			return { clipsManifestRelativePath };
 		}
 
-		const sourceAbsolutePath =
-			this.blobStorage.getStoragePathsForVideo(video).sourceAbsolutePath;
-		const probe = await probeVideoFile(sourceAbsolutePath);
-		const targetIntegratedLufs = await this.resolveSourceTargetLufs({
-			sourceAbsolutePath,
-			videoId: video.id,
-		});
-		const closingAudio = await this.explanationTtsService.resolveClosingAudio(
-			video.explanationLanguage,
-		);
-		const concurrency = resolveClipGenerationConcurrency();
-
-		this.logger.info(
-			{
+		const workspace = await this.mediaWorkspace.create(`clips-${video.id}`);
+		try {
+			await mkdir(path.join(workspace.dir, "clips"), { recursive: true });
+			const sourceAbsolutePath = await downloadSourceVideoToWorkspace({
+				blobStorage: this.blobStorage,
+				workspace,
+				video,
+			});
+			const probe = await probeVideoFile(sourceAbsolutePath);
+			const targetIntegratedLufs = await this.resolveSourceTargetLufs({
+				sourceAbsolutePath,
 				videoId: video.id,
-				clipCount: insertPoints.length,
+			});
+			const closingAudio = await this.explanationTtsService.resolveClosingAudio(
+				{
+					explanationLanguage: video.explanationLanguage,
+					workspace,
+				},
+			);
+			const concurrency = resolveClipGenerationConcurrency();
+
+			this.logger.info(
+				{
+					videoId: video.id,
+					clipCount: insertPoints.length,
+					concurrency,
+				},
+				"explanation-clips-start",
+			);
+
+			const clips = await mapWithConcurrency({
+				items: insertPoints,
 				concurrency,
-			},
-			"explanation-clips-start",
-		);
+				mapper: (insertPoint) =>
+					this.renderClip({
+						video,
+						insertPoint,
+						probe,
+						targetIntegratedLufs,
+						closingAudio,
+						workspace,
+					}),
+			});
+			clips.sort((left, right) => left.index - right.index);
 
-		const clips = await mapWithConcurrency({
-			items: insertPoints,
-			concurrency,
-			mapper: (insertPoint) =>
-				this.renderClip({
-					video,
-					insertPoint,
-					probe,
-					targetIntegratedLufs,
-					closingAudio,
-				}),
-		});
-		clips.sort((left, right) => left.index - right.index);
+			await workspace.uploadDir({
+				localDir: path.join(workspace.dir, "clips"),
+				prefix: clipsDirectoryRelativePath,
+			});
+			await this.blobStorage.writeJson(clipsManifestRelativePath, { clips });
 
-		await this.blobStorage.writeJson(clipsManifestRelativePath, { clips });
+			this.logger.info(
+				{ videoId: video.id, clipCount: clips.length },
+				"explanation-clips-success",
+			);
 
-		this.logger.info(
-			{ videoId: video.id, clipCount: clips.length },
-			"explanation-clips-success",
-		);
-
-		return { clipsManifestRelativePath };
+			return { clipsManifestRelativePath };
+		} finally {
+			await workspace.dispose();
+		}
 	}
 
 	private async resolveSourceTargetLufs(input: {
@@ -199,18 +221,24 @@ export class ExplanationClipService {
 		probe: ClipProbe;
 		targetIntegratedLufs: number;
 		closingAudio: ClosingAudio;
+		workspace: MediaWorkspace;
 	}): Promise<ExplanationClipManifestEntry> {
 		const { video, insertPoint, probe, targetIntegratedLufs, closingAudio } =
 			input;
 		const { index, phrase, insertAtSeconds, sentenceStartSeconds } =
 			insertPoint;
-		const paths = this.resolveClipPaths({ videoId: video.id, index });
+		const paths = this.resolveClipPaths({
+			videoId: video.id,
+			index,
+			workspace: input.workspace,
+		});
 		const combinedAudio = await this.buildCombinedClipAudio({
 			video,
 			index,
 			phrase,
-			audioAbsolutePath: paths.audioAbsolutePath,
+			paths,
 			closingAudio,
+			workspace: input.workspace,
 		});
 		const durationSeconds = computeClipDurationSeconds(
 			combinedAudio.ttsDurationSeconds,
@@ -223,13 +251,18 @@ export class ExplanationClipService {
 			closingDurationSeconds: combinedAudio.closingDurationSeconds,
 			probe,
 		});
-		await this.blobStorage.writeText(paths.assRelativePath, assContent);
+		const assAbsolutePath = path.join(
+			input.workspace.dir,
+			"clips",
+			path.basename(paths.assRelativePath),
+		);
+		await writeFile(assAbsolutePath, assContent, "utf8");
 		await this.renderClipVideo({
 			videoId: video.id,
 			index,
 			durationSeconds,
 			audioAbsolutePath: paths.audioAbsolutePath,
-			assAbsolutePath: paths.assAbsolutePath,
+			assAbsolutePath,
 			videoAbsolutePath: paths.videoAbsolutePath,
 			probe,
 			targetIntegratedLufs,
@@ -245,11 +278,14 @@ export class ExplanationClipService {
 		};
 	}
 
-	private resolveClipPaths(input: { videoId: string; index: number }): {
+	private resolveClipPaths(input: {
+		videoId: string;
+		index: number;
+		workspace: MediaWorkspace;
+	}): {
 		audioRelativePath: string;
 		audioAbsolutePath: string;
 		assRelativePath: string;
-		assAbsolutePath: string;
 		videoRelativePath: string;
 		videoAbsolutePath: string;
 	} {
@@ -265,13 +301,18 @@ export class ExplanationClipService {
 
 		return {
 			audioRelativePath,
-			audioAbsolutePath:
-				this.blobStorage.resolveRelativePath(audioRelativePath),
+			audioAbsolutePath: path.join(
+				input.workspace.dir,
+				"clips",
+				path.basename(audioRelativePath),
+			),
 			assRelativePath,
-			assAbsolutePath: this.blobStorage.resolveRelativePath(assRelativePath),
 			videoRelativePath,
-			videoAbsolutePath:
-				this.blobStorage.resolveRelativePath(videoRelativePath),
+			videoAbsolutePath: path.join(
+				input.workspace.dir,
+				"clips",
+				path.basename(videoRelativePath),
+			),
 		};
 	}
 
@@ -279,8 +320,9 @@ export class ExplanationClipService {
 		video: VideoRecord;
 		index: number;
 		phrase: DetectedPhrase;
-		audioAbsolutePath: string;
+		paths: ReturnType<ExplanationClipService["resolveClipPaths"]>;
 		closingAudio: ClosingAudio;
+		workspace: MediaWorkspace;
 	}): Promise<CombinedClipAudio> {
 		const speechRelativePath = getClipSpeechAudioRelativePath(
 			input.video.id,
@@ -292,9 +334,12 @@ export class ExplanationClipService {
 				explanation: input.phrase.explanation,
 				explanationLanguage: input.video.explanationLanguage,
 				outputRelativePath: speechRelativePath,
+				workspace: input.workspace,
 			});
-		const speechAbsolutePath =
-			this.blobStorage.resolveRelativePath(speechRelativePath);
+		const speechAbsolutePath = path.join(
+			input.workspace.dir,
+			path.basename(speechRelativePath),
+		);
 
 		try {
 			await runProcess(
@@ -303,7 +348,7 @@ export class ExplanationClipService {
 					speechAudioAbsolutePath: speechAbsolutePath,
 					closingAudioAbsolutePath: input.closingAudio.absolutePath,
 					midGapSeconds: CLOSING_GAP_SECONDS,
-					outputAbsolutePath: input.audioAbsolutePath,
+					outputAbsolutePath: input.paths.audioAbsolutePath,
 				}),
 			);
 		} catch (error) {
@@ -316,7 +361,7 @@ export class ExplanationClipService {
 			input.closingAudio.durationSeconds;
 
 		return {
-			audioAbsolutePath: input.audioAbsolutePath,
+			audioAbsolutePath: input.paths.audioAbsolutePath,
 			speechDurationSeconds,
 			closingDurationSeconds: input.closingAudio.durationSeconds,
 			ttsDurationSeconds,

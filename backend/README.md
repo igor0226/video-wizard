@@ -1,6 +1,6 @@
 # Backend
 
-Nest.js API and background worker for the local video streaming app. Handles upload, filesystem-backed video records, FFmpeg DASH processing, and manifest/segment serving.
+Nest.js API and background worker for the local video streaming app. Handles upload, S3/MinIO-backed blob storage, FFmpeg DASH processing, and manifest/segment serving.
 
 ## Prerequisites
 
@@ -37,17 +37,20 @@ npm run start:dev
 - `GET /api/dash/:id/manifest.mpd` — DASH manifest (BaseURL rewritten at serve time)
 - `GET /api/dash/:id/segment/*` — DASH segments
 
-## Local storage
+## Object storage
 
-Assets live under repo-root `videos/` by default (Compose mounts this at `/videos` via `STORAGE_ROOT`):
+Pipeline blobs live in an S3-compatible bucket (MinIO in Compose, AWS S3 in production). See `S3_*` and `MEDIA_WORKSPACE_ROOT` in [`.env.example`](.env.example).
+
+Object keys mirror the former repo-root `videos/` layout:
 
 - `uploads/<videoId>/` — source files
 - `dash/<videoId>/` — `manifest.mpd` + segments
 - `audio/<videoId>/` — extracted MP3 for transcription
 - `transcripts/<videoId>/` — Whisper transcript JSON
-- `explanations/<videoId>/` — detected phrases JSON (`phrases.json`)
-- `records/<videoId>.json` — video records
-- `locks/<videoId>.lock` — worker concurrency locks
+- `explanations/<videoId>/` — detected phrases JSON and rendered clips
+- `enriched/<videoId>/` — composed output video
+
+Video metadata and processing history are in PostgreSQL. To migrate existing local `videos/` data into MinIO, see the one-time command in [`AGENTS.md`](AGENTS.md).
 
 ## Notes
 

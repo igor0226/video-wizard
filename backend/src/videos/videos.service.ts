@@ -15,7 +15,7 @@ import {
 	type CreateVideoInput,
 	type VideoRecord,
 } from "../storage";
-import { getQueuePosition } from "./queue-position";
+import { getQueuePosition } from "./utils/queue-position";
 
 type PlaybackPhrasesFile = {
 	phrases: PlaybackPhrase[];

@@ -1,4 +1,3 @@
-import { access } from "node:fs/promises";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
@@ -8,20 +7,10 @@ import {
 	transcriptDir,
 } from "../../fixtures/seed-failed-video";
 import { seedReadyVideo } from "../../fixtures/seed-ready-video";
-import { getE2eStorageRoot } from "../../setup-e2e";
 import { useE2eApp } from "../helpers/e2e-lifecycle";
 
-async function pathExists(absolutePath: string): Promise<boolean> {
-	try {
-		await access(absolutePath);
-		return true;
-	} catch {
-		return false;
-	}
-}
-
 describe("Videos retry (e2e)", () => {
-	const { getApp } = useE2eApp();
+	const { getApp, getBlobStorage } = useE2eApp();
 
 	it("POST /api/videos/:id/retry returns 404 for unknown video", async () => {
 		const response = await request(getApp().getHttpServer()).post(
@@ -32,7 +21,7 @@ describe("Videos retry (e2e)", () => {
 	});
 
 	it("POST /api/videos/:id/retry returns 409 for non-failed video", async () => {
-		const { videoId } = await seedReadyVideo(getE2eStorageRoot());
+		const { videoId } = await seedReadyVideo(getBlobStorage());
 
 		const response = await request(getApp().getHttpServer()).post(
 			`/api/videos/${videoId}/retry`,
@@ -42,8 +31,8 @@ describe("Videos retry (e2e)", () => {
 	});
 
 	it("POST /api/videos/:id/retry queues failed video from last failed step", async () => {
-		const storageRoot = getE2eStorageRoot();
-		const { videoId } = await seedFailedVideo(storageRoot);
+		const blobStorage = getBlobStorage();
+		const { videoId } = await seedFailedVideo(blobStorage);
 
 		const response = await request(getApp().getHttpServer()).post(
 			`/api/videos/${videoId}/retry`,
@@ -75,11 +64,9 @@ describe("Videos retry (e2e)", () => {
 			]),
 		);
 
-		expect(
-			await pathExists(`${storageRoot}/${audioDir(videoId)}/track.mp3`),
-		).toBe(true);
-		expect(await pathExists(`${storageRoot}/${transcriptDir(videoId)}`)).toBe(
-			false,
+		expect(await blobStorage.fileExists(`${audioDir(videoId)}/track.mp3`)).toBe(
+			true,
 		);
+		expect(await blobStorage.fileExists(transcriptDir(videoId))).toBe(false);
 	});
 });

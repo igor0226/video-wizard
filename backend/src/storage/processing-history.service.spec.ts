@@ -1,29 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Repository } from "typeorm";
 
-import { BlobStorageService } from "./blob-storage.service";
+import type { ProcessingHistory } from "../models";
 import { ProcessingHistoryService } from "./processing-history.service";
 
 describe("ProcessingHistoryService", () => {
-	let blobStorage: BlobStorageService;
 	let service: ProcessingHistoryService;
-	const written = new Map<string, unknown>();
+	const saved = new Map<string, ProcessingHistory>();
 
 	beforeEach(() => {
-		written.clear();
-		blobStorage = {
-			ensureLayout: vi.fn(async () => undefined),
-			readText: vi.fn(async (relativePath: string) => {
-				const data = written.get(relativePath);
-				if (!data) {
-					throw new Error("ENOENT");
-				}
-				return JSON.stringify(data);
+		saved.clear();
+		const historyRepository = {
+			findOne: vi.fn(async ({ where }: { where: { videoId: string } }) => {
+				return saved.get(where.videoId) ?? null;
 			}),
-			writeJson: vi.fn(async (relativePath: string, data: unknown) => {
-				written.set(relativePath, data);
+			save: vi.fn(async (history: ProcessingHistory) => {
+				saved.set(history.videoId, history);
+				return history;
 			}),
-		} as unknown as BlobStorageService;
-		service = new ProcessingHistoryService(blobStorage);
+		} as unknown as Repository<ProcessingHistory>;
+		service = new ProcessingHistoryService(historyRepository);
 	});
 
 	it("initializes history with queued step", async () => {

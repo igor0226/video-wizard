@@ -9,6 +9,7 @@ import { ExplanationTtsService } from "./generating-clips/explanation-tts.servic
 import { JobsService } from "./jobs.service";
 import { ProcessingPipelineService } from "./processing-pipeline.service";
 import { ProcessingWorkerService } from "./processing.service";
+import { MediaWorkspaceService } from "./shared/media-workspace.service";
 import { WhisperTranscriptionService } from "./transcribing/transcription.service";
 
 @Module({
@@ -20,6 +21,7 @@ import { WhisperTranscriptionService } from "./transcribing/transcription.servic
 		PhraseDetectionService,
 		ExplanationTtsService,
 		ExplanationClipService,
+		MediaWorkspaceService,
 		ProcessingPipelineService,
 		JobsService,
 		ProcessingWorkerService,

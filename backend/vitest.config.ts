@@ -6,6 +6,8 @@ export default defineConfig({
 		environment: "node",
 		include: ["src/**/*.spec.ts"],
 		setupFiles: ["./test/setup.ts"],
+		globalSetup: ["./test/global-setup.ts"],
+		hookTimeout: 120_000,
 		root: "./",
 	},
 	plugins: [

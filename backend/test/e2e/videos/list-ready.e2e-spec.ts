@@ -2,14 +2,13 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { seedReadyVideo } from "../../fixtures/seed-ready-video";
-import { getE2eStorageRoot } from "../../setup-e2e";
 import { useE2eApp } from "../helpers/e2e-lifecycle";
 
 describe("Videos list ready playback (e2e)", () => {
-	const { getApp } = useE2eApp();
+	const { getApp, getBlobStorage } = useE2eApp();
 
 	it("GET /api/videos includes playable entries with dashManifestUrl", async () => {
-		const { videoId, title } = await seedReadyVideo(getE2eStorageRoot());
+		const { videoId, title } = await seedReadyVideo(getBlobStorage());
 
 		const response = await request(getApp().getHttpServer()).get("/api/videos");
 

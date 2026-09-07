@@ -4,22 +4,22 @@ import path from "node:path";
 
 import "./setup";
 
-let e2eStorageRoot = "";
+let e2eWorkspaceRoot = "";
 
-export const getE2eStorageRoot = () => e2eStorageRoot;
+export const getE2eWorkspaceRoot = () => e2eWorkspaceRoot;
 
 export async function setupE2eStorage(): Promise<string> {
-	e2eStorageRoot = await mkdtemp(
-		path.join(os.tmpdir(), "video-streaming-e2e-"),
+	e2eWorkspaceRoot = await mkdtemp(
+		path.join(os.tmpdir(), "video-streaming-e2e-workspace-"),
 	);
-	process.env.STORAGE_ROOT = e2eStorageRoot;
-	return e2eStorageRoot;
+	process.env.MEDIA_WORKSPACE_ROOT = e2eWorkspaceRoot;
+	return e2eWorkspaceRoot;
 }
 
 export async function teardownE2eStorage(): Promise<void> {
-	if (!e2eStorageRoot) {
+	if (!e2eWorkspaceRoot) {
 		return;
 	}
-	await rm(e2eStorageRoot, { recursive: true, force: true });
-	e2eStorageRoot = "";
+	await rm(e2eWorkspaceRoot, { recursive: true, force: true });
+	e2eWorkspaceRoot = "";
 }

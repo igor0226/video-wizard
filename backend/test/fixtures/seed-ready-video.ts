@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import type { BlobStorageService } from "../../src/storage";
 import type { VideoRecord } from "../../src/storage/types";
+import { seedVideoMetadata } from "./seed-video-db";
 
 const MANIFEST_FILE_NAME = "manifest.mpd";
 
@@ -13,7 +14,7 @@ export type SeededReadyVideo = {
 };
 
 export async function seedReadyVideo(
-	storageRoot: string,
+	blobStorage: BlobStorageService,
 	options?: { title?: string },
 ): Promise<SeededReadyVideo> {
 	const videoId = randomUUID();
@@ -60,45 +61,29 @@ export async function seedReadyVideo(
 		"</MPD>",
 	].join("\n");
 
-	await mkdir(path.join(storageRoot, "records"), { recursive: true });
-	await mkdir(path.join(storageRoot, dashRelativePath), { recursive: true });
-	await mkdir(path.dirname(path.join(storageRoot, sourceRelativePath)), {
-		recursive: true,
-	});
-
-	await writeFile(
-		path.join(storageRoot, "records", `${videoId}.json`),
-		JSON.stringify(record, null, 2),
-		"utf8",
-	);
-	await writeFile(
-		path.join(storageRoot, dashRelativePath, MANIFEST_FILE_NAME),
-		manifestContent,
-		"utf8",
-	);
-	await writeFile(
-		path.join(storageRoot, dashRelativePath, segmentFileName),
-		Buffer.from("mock-segment-bytes"),
-	);
-	await writeFile(
-		path.join(storageRoot, sourceRelativePath),
-		Buffer.from("mock-upload-bytes"),
-	);
-
 	const history = {
 		videoId,
-		currentStep: "completed",
+		currentStep: "completed" as const,
 		events: [
-			{ step: "queued", status: "started", at: nowIso },
-			{ step: "completed", status: "completed", at: nowIso },
+			{ step: "queued" as const, status: "started" as const, at: nowIso },
+			{ step: "completed" as const, status: "completed" as const, at: nowIso },
 		],
 		updatedAt: nowIso,
 	};
-	await mkdir(path.join(storageRoot, "history"), { recursive: true });
-	await writeFile(
-		path.join(storageRoot, "history", `${videoId}.json`),
-		JSON.stringify(history, null, 2),
-		"utf8",
+
+	await seedVideoMetadata({ record, history });
+
+	await blobStorage.writeText(
+		path.posix.join(dashRelativePath, MANIFEST_FILE_NAME),
+		manifestContent,
+	);
+	await blobStorage.writeUploadFile(
+		path.posix.join(dashRelativePath, segmentFileName),
+		Buffer.from("mock-segment-bytes"),
+	);
+	await blobStorage.writeUploadFile(
+		sourceRelativePath,
+		Buffer.from("mock-upload-bytes"),
 	);
 
 	return { videoId, segmentFileName, title };

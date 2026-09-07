@@ -9,6 +9,16 @@ import { WhisperTranscriptionService } from "./processing/transcribing/transcrip
 import { BlobStorageService, VideoRepositoryService } from "./storage";
 import { VideosService } from "./videos/videos.service";
 import { createTestApp } from "../test/create-test-app";
+import {
+	resetPostgresTables,
+	startPostgresForTests,
+	stopPostgresForTests,
+} from "../test/postgres-test-setup";
+import {
+	startMinioForTests,
+	stopMinioForTests,
+} from "../test/minio-test-setup";
+import { setupE2eStorage, teardownE2eStorage } from "../test/setup-e2e";
 import type { INestApplication } from "@nestjs/common";
 import type { TestingModule } from "@nestjs/testing";
 
@@ -17,11 +27,20 @@ describe("AppModule", () => {
 	let moduleRef: TestingModule;
 
 	beforeAll(async () => {
+		await startPostgresForTests();
+		await startMinioForTests();
+		await setupE2eStorage();
+		await resetPostgresTables();
 		({ app, moduleRef } = await createTestApp());
-	});
+	}, 120_000);
 
 	afterAll(async () => {
-		await app.close();
+		if (app) {
+			await app.close();
+		}
+		await teardownE2eStorage();
+		await stopMinioForTests();
+		await stopPostgresForTests();
 	});
 
 	it("resolves core providers from the DI container", () => {

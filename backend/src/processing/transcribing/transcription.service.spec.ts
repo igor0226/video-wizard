@@ -3,6 +3,8 @@ import { createReadStream } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BlobStorageService } from "../../storage";
+import type { MediaWorkspace } from "../shared/media-workspace.service";
+import { MediaWorkspaceService } from "../shared/media-workspace.service";
 import { makeTestVideoRecord } from "../../../test/helpers/make-test-video-record";
 import type { ExtractAudioResult } from "../audio-extract/ffmpeg-audio.service";
 import { WhisperTranscriptionService } from "./transcription.service";
@@ -34,16 +36,23 @@ describe("WhisperTranscriptionService", () => {
 	};
 
 	let blobStorage: BlobStorageService;
+	let workspace: MediaWorkspace;
+	let mediaWorkspace: MediaWorkspaceService;
 	let service: WhisperTranscriptionService;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 		process.env.OPENAI_API_KEY = "test-key";
+		workspace = {
+			dir: "/tmp/workspace",
+			download: vi.fn(async () => "/tmp/workspace/track.mp3"),
+			getLocalFileSizeBytes: vi.fn(async () => 1024),
+			dispose: vi.fn(async () => undefined),
+		} as unknown as MediaWorkspace;
+		mediaWorkspace = {
+			create: vi.fn(async () => workspace),
+		} as unknown as MediaWorkspaceService;
 		blobStorage = {
-			resolveRelativePath: vi.fn(
-				(relativePath: string) => `/tmp/${relativePath}`,
-			),
-			getFileSizeBytes: vi.fn(async () => 1024),
 			getTranscriptRelativePath: vi.fn(
 				() => "transcripts/video-1/transcript.json",
 			),
@@ -52,6 +61,7 @@ describe("WhisperTranscriptionService", () => {
 		service = new WhisperTranscriptionService(
 			{ info: vi.fn() } as never,
 			blobStorage,
+			mediaWorkspace,
 		);
 	});
 
@@ -66,9 +76,7 @@ describe("WhisperTranscriptionService", () => {
 
 		const result = await service.transcribe({ video, audioResult });
 
-		expect(createReadStream).toHaveBeenCalledWith(
-			"/tmp/audio/video-1/track.mp3",
-		);
+		expect(createReadStream).toHaveBeenCalledWith("/tmp/workspace/track.mp3");
 		expect(createMock).toHaveBeenCalledWith({
 			file: "mock-stream",
 			model: "whisper-1",
@@ -85,6 +93,7 @@ describe("WhisperTranscriptionService", () => {
 		expect(result.transcriptRelativePath).toBe(
 			"transcripts/video-1/transcript.json",
 		);
+		expect(workspace.dispose).toHaveBeenCalled();
 	});
 
 	it("fails fast when OPENAI_API_KEY is missing", async () => {

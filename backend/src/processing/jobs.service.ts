@@ -1,28 +1,20 @@
-import { mkdir, open, rm } from "node:fs/promises";
-import path from "node:path";
-
 import { Injectable } from "@nestjs/common";
 import { InjectPinoLogger, type PinoLogger } from "nestjs-pino";
 
 import {
-	BlobStorageService,
 	ProcessingHistoryService,
+	ProcessingLockService,
 	type VideoRecord,
 	VideoRepositoryService,
 } from "../storage";
 import {
 	getFailedStep,
 	normalizeFailureMessage,
-} from "./processing-step-runner";
+} from "./utils/processing-errors";
 import {
 	ProcessingPipelineService,
 	type ProcessingResults,
 } from "./processing-pipeline.service";
-
-type VideoLock = {
-	handle: Awaited<ReturnType<typeof open>>;
-	path: string;
-};
 
 @Injectable()
 export class JobsService {
@@ -31,7 +23,7 @@ export class JobsService {
 		private readonly logger: PinoLogger,
 		private readonly processingPipelineService: ProcessingPipelineService,
 		private readonly videoRepository: VideoRepositoryService,
-		private readonly blobStorage: BlobStorageService,
+		private readonly processingLockService: ProcessingLockService,
 		private readonly processingHistory: ProcessingHistoryService,
 	) {}
 
@@ -41,8 +33,12 @@ export class JobsService {
 			return;
 		}
 
-		const lock = await this.tryAcquireLock(video.id);
-		if (!lock) {
+		const acquired = await this.processingLockService.tryAcquire(video.id);
+		if (!acquired) {
+			this.logger.info(
+				{ videoId: video.id, reason: "already-locked" },
+				"lock-skip",
+			);
 			return;
 		}
 
@@ -54,7 +50,7 @@ export class JobsService {
 		} catch (error) {
 			await this.finishVideoWithFailure(video, error);
 		} finally {
-			await this.releaseLock(lock);
+			await this.processingLockService.release(video.id);
 		}
 	}
 
@@ -80,30 +76,6 @@ export class JobsService {
 			"scan-processable found",
 		);
 		return video;
-	}
-
-	private async tryAcquireLock(videoId: string): Promise<VideoLock | null> {
-		const lockPath = this.blobStorage.resolveRelativePath(
-			path.posix.join("locks", `${videoId}.lock`),
-		);
-		await mkdir(path.dirname(lockPath), { recursive: true });
-
-		try {
-			const handle = await open(lockPath, "wx");
-			return { handle, path: lockPath };
-		} catch (error) {
-			const code = (error as { code?: string }).code;
-			if (code === "EEXIST") {
-				this.logger.info({ videoId, reason: "already-locked" }, "lock-skip");
-				return null;
-			}
-			throw error;
-		}
-	}
-
-	private async releaseLock(lock: VideoLock): Promise<void> {
-		await lock.handle.close();
-		await rm(lock.path, { force: true });
 	}
 
 	private async beginProcessing(video: VideoRecord): Promise<void> {

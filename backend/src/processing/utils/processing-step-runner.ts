@@ -1,30 +1,7 @@
 import type { PinoLogger } from "nestjs-pino";
 
-import type { ProcessingHistoryService, ProcessingStep } from "../storage";
-
-export class StepFailedError extends Error {
-	constructor(
-		readonly step: ProcessingStep,
-		cause: unknown,
-	) {
-		super(normalizeFailureMessage(cause));
-		this.name = "StepFailedError";
-	}
-}
-
-export function normalizeFailureMessage(error: unknown): string {
-	if (error instanceof Error) {
-		return error.message.slice(0, 400);
-	}
-	return "Unexpected processing error";
-}
-
-export function getFailedStep(error: unknown): ProcessingStep {
-	if (error instanceof StepFailedError) {
-		return error.step;
-	}
-	return "audio_extract";
-}
+import type { ProcessingHistoryService, ProcessingStep } from "../../storage";
+import { StepFailedError } from "./processing-errors";
 
 type StepRunnerDeps = {
 	processingHistory: ProcessingHistoryService;

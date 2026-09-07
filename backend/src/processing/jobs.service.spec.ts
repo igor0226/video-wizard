@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-	BlobStorageService,
 	ProcessingHistoryService,
+	ProcessingLockService,
 	VideoRepositoryService,
 } from "../storage";
 import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
@@ -12,14 +12,7 @@ import { FfmpegDashService } from "./dash-encoding/ffmpeg-dash.service";
 import { JobsService } from "./jobs.service";
 import { ProcessingPipelineService } from "./processing-pipeline.service";
 import { WhisperTranscriptionService } from "./transcribing/transcription.service";
-
-vi.mock("node:fs/promises", () => ({
-	open: vi.fn(async () => ({
-		close: vi.fn(async () => undefined),
-	})),
-	mkdir: vi.fn(async () => undefined),
-	rm: vi.fn(async () => undefined),
-}));
+import { BlobStorageService } from "../storage/blob-storage.service";
 
 describe("JobsService", () => {
 	const video = makeTestVideoRecord();
@@ -27,7 +20,7 @@ describe("JobsService", () => {
 	let service: JobsService;
 	let processingPipelineService: ProcessingPipelineService;
 	let videoRepository: VideoRepositoryService;
-	let blobStorage: BlobStorageService;
+	let processingLockService: ProcessingLockService;
 	let processingHistory: ProcessingHistoryService;
 	const callOrder: string[] = [];
 
@@ -73,17 +66,16 @@ describe("JobsService", () => {
 				callOrder.push("mark-completed");
 			}),
 		} as unknown as ProcessingHistoryService;
-		blobStorage = {
-			resolveRelativePath: vi.fn(
-				(relativePath: string) => `/tmp/${relativePath}`,
-			),
-		} as unknown as BlobStorageService;
+		processingLockService = {
+			tryAcquire: vi.fn(async () => true),
+			release: vi.fn(async () => undefined),
+		} as unknown as ProcessingLockService;
 
 		service = new JobsService(
 			{ info: vi.fn(), error: vi.fn() } as never,
 			processingPipelineService,
 			videoRepository,
-			blobStorage,
+			processingLockService,
 			processingHistory,
 		);
 	});
@@ -107,6 +99,8 @@ describe("JobsService", () => {
 		expect(
 			processingPipelineService.runProcessingPipeline,
 		).toHaveBeenCalledWith(video);
+		expect(processingLockService.tryAcquire).toHaveBeenCalledWith("video-1");
+		expect(processingLockService.release).toHaveBeenCalledWith("video-1");
 	});
 });
 

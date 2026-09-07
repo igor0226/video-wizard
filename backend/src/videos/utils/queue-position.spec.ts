@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { VideoRecord } from "../storage";
-import { makeTestVideoRecord } from "../../test/helpers/make-test-video-record";
+import type { VideoRecord } from "../../storage";
+import { makeTestVideoRecord } from "../../../test/helpers/make-test-video-record";
 import { getQueuePosition } from "./queue-position";
 
 function makeVideo(input: {

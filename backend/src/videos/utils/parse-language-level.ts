@@ -1,4 +1,4 @@
-import type { LanguageLevel } from "../storage/types";
+import type { LanguageLevel } from "../../storage/types";
 
 const VALID_LEVELS = new Set<LanguageLevel>([
 	"A1",

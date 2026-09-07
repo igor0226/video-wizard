@@ -1,4 +1,4 @@
-import type { VideoRecord } from "../storage";
+import type { VideoRecord } from "../../storage";
 
 export function getQueuePosition(
 	video: VideoRecord,

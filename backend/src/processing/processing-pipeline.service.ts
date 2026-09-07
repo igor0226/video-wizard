@@ -16,7 +16,7 @@ import { ExplanationClipService } from "./generating-clips/explanation-clip.serv
 import {
 	executeProcessingStep,
 	skipProcessingStep,
-} from "./processing-step-runner";
+} from "./utils/processing-step-runner";
 import { WhisperTranscriptionService } from "./transcribing/transcription.service";
 
 type ExtractAudioResult = { audioRelativePath: string };

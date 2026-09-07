@@ -2,11 +2,10 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { seedReadyVideo } from "../../fixtures/seed-ready-video";
-import { getE2eStorageRoot } from "../../setup-e2e";
 import { useE2eApp } from "../helpers/e2e-lifecycle";
 
 describe("Videos status (e2e)", () => {
-	const { getApp } = useE2eApp();
+	const { getApp, getBlobStorage } = useE2eApp();
 
 	it("GET /api/videos/:id/status returns 404 for unknown video", async () => {
 		const response = await request(getApp().getHttpServer()).get(
@@ -17,7 +16,7 @@ describe("Videos status (e2e)", () => {
 	});
 
 	it("GET /api/videos/:id/status returns ready video metadata", async () => {
-		const { videoId } = await seedReadyVideo(getE2eStorageRoot());
+		const { videoId } = await seedReadyVideo(getBlobStorage());
 
 		const response = await request(getApp().getHttpServer()).get(
 			`/api/videos/${videoId}/status`,

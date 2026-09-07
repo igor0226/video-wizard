@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { Injectable } from "@nestjs/common";
@@ -6,6 +7,8 @@ import OpenAI from "openai";
 
 import { BlobStorageService } from "../../storage";
 import { probeAudioDurationSeconds } from "../shared/ffmpeg-probe";
+import type { MediaWorkspace } from "../shared/media-workspace.service";
+import { MediaWorkspaceService } from "../shared/media-workspace.service";
 import {
 	getListenAgainPhrase,
 	normalizeExplanationLanguage,
@@ -20,6 +23,7 @@ export type SynthesizeSpeechInput = {
 	explanation: string;
 	explanationLanguage: string;
 	outputRelativePath: string;
+	workspace?: MediaWorkspace;
 };
 
 export function buildExplanationSpeechText(input: {
@@ -49,6 +53,7 @@ export class ExplanationTtsService {
 		@InjectPinoLogger(ExplanationTtsService.name)
 		private readonly logger: PinoLogger,
 		private readonly blobStorage: BlobStorageService,
+		private readonly mediaWorkspace: MediaWorkspaceService,
 	) {}
 
 	async synthesizeSpeech(
@@ -76,29 +81,41 @@ export class ExplanationTtsService {
 		});
 
 		const buffer = Buffer.from(await response.arrayBuffer());
-		await this.blobStorage.writeUploadFile(input.outputRelativePath, buffer);
+		const ownsWorkspace = !input.workspace;
+		const workspace =
+			input.workspace ?? (await this.mediaWorkspace.create("explanation-tts"));
 
-		const outputAbsolutePath = this.blobStorage.resolveRelativePath(
-			input.outputRelativePath,
-		);
-		const durationSeconds = await probeAudioDurationSeconds(outputAbsolutePath);
-		this.logger.info(
-			{ output: input.outputRelativePath, durationSeconds },
-			"explanation-tts-success",
-		);
-
-		return { durationSeconds };
+		try {
+			const localPath = await workspace.localPath(
+				path.basename(input.outputRelativePath),
+			);
+			await writeFile(localPath, buffer);
+			const durationSeconds = await probeAudioDurationSeconds(localPath);
+			await workspace.upload({
+				localPath,
+				key: input.outputRelativePath,
+			});
+			this.logger.info(
+				{ output: input.outputRelativePath, durationSeconds },
+				"explanation-tts-success",
+			);
+			return { durationSeconds };
+		} finally {
+			if (ownsWorkspace) {
+				await workspace.dispose();
+			}
+		}
 	}
 
-	async resolveClosingAudio(
-		explanationLanguage: string,
-	): Promise<{ absolutePath: string; durationSeconds: number }> {
-		const normalizedLanguage =
-			normalizeExplanationLanguage(explanationLanguage);
+	async resolveClosingAudio(input: {
+		explanationLanguage: string;
+		workspace: MediaWorkspace;
+	}): Promise<{ absolutePath: string; durationSeconds: number }> {
+		const normalizedLanguage = normalizeExplanationLanguage(
+			input.explanationLanguage,
+		);
 		const assetRelativePath =
 			this.blobStorage.getListenAgainAssetRelativePath(normalizedLanguage);
-		const assetAbsolutePath =
-			this.blobStorage.resolveRelativePath(assetRelativePath);
 
 		if (!(await this.blobStorage.fileExists(assetRelativePath))) {
 			this.logger.info(
@@ -107,9 +124,10 @@ export class ExplanationTtsService {
 			);
 			await this.synthesizeSpeech({
 				phrase: "",
-				explanation: getListenAgainPhrase(explanationLanguage),
-				explanationLanguage,
+				explanation: getListenAgainPhrase(input.explanationLanguage),
+				explanationLanguage: input.explanationLanguage,
 				outputRelativePath: assetRelativePath,
+				workspace: input.workspace,
 			});
 		} else {
 			this.logger.info(
@@ -118,8 +136,12 @@ export class ExplanationTtsService {
 			);
 		}
 
-		const durationSeconds = await probeAudioDurationSeconds(assetAbsolutePath);
-		return { absolutePath: assetAbsolutePath, durationSeconds };
+		const absolutePath = await input.workspace.download({
+			key: assetRelativePath,
+			relative: path.basename(assetRelativePath),
+		});
+		const durationSeconds = await probeAudioDurationSeconds(absolutePath);
+		return { absolutePath, durationSeconds };
 	}
 
 	private getOpenAiClient(apiKey: string): OpenAI {

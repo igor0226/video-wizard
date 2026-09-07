@@ -6,6 +6,9 @@ export default defineConfig({
 		environment: "node",
 		include: ["test/e2e/**/*.e2e-spec.ts"],
 		setupFiles: ["./test/setup-e2e.ts"],
+		globalSetup: ["./test/global-setup-e2e.ts"],
+		hookTimeout: 120_000,
+		fileParallelism: false,
 		root: "./",
 	},
 	plugins: [
