@@ -2,7 +2,7 @@
 	"name": "video-streaming",
 	"version": "1.0.0",
 	"private": true,
-	"description": "Local video streaming monorepo (Next frontend + Nest backend)",
+	"description": "Local language learning platform monorepo (Next frontend + Nest backend)",
 	"scripts": {
 		"prepare": "husky",
 		"dev": "docker compose up",

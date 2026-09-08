@@ -1,0 +1,47 @@
+.dashboardPage {
+	@apply mx-auto max-w-7xl space-y-8 px-6 py-8;
+}
+
+.dashboardTabs {
+	@apply border-b border-border;
+}
+
+.dashboardTabsList {
+	@apply h-auto w-full justify-start gap-2 rounded-none bg-transparent p-0;
+}
+
+.dashboardTab {
+	@apply rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none;
+}
+
+.dashboardHeatmapGrid {
+	@apply grid min-w-[640px] grid-cols-10 gap-2;
+}
+
+.heatmapCell-0 {
+	@apply bg-muted hover:bg-accent;
+}
+
+.heatmapCell-1 {
+	@apply bg-secondary-foreground/20 hover:bg-secondary-foreground/30;
+}
+
+.heatmapCell-2 {
+	@apply bg-foreground/60 hover:bg-foreground/70;
+}
+
+.heatmapCell-3 {
+	@apply bg-foreground hover:bg-foreground/90;
+}
+
+.dashboardMetrics {
+	@apply grid grid-cols-1 gap-6 md:grid-cols-3;
+}
+
+.dashboardSplit {
+	@apply grid grid-cols-1 gap-8 lg:grid-cols-12;
+}
+
+.activityRow {
+	@apply flex cursor-pointer items-center justify-between rounded-lg px-2 py-3 hover:bg-muted;
+}

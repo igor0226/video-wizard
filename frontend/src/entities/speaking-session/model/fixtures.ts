@@ -1,0 +1,149 @@
+import type {
+	CallTopic,
+	ConnectionStep,
+	SavedPhrase,
+	SpeakingCall,
+	TranscriptSegment,
+} from "./types";
+
+export const SPEAKING_TOPICS: CallTopic[] = [
+	{
+		id: "topic-1",
+		title: "Job Interview: Technical & Product Communication",
+		level: "B2-C1",
+		description:
+			"Practice answering complex behavioral and technical architecture questions in a professional setting.",
+		suggestedDurationMins: 15,
+		tags: ["Professional", "Tech", "Fluency"],
+	},
+	{
+		id: "topic-2",
+		title: "Travel Situations: Airport & Hotel Check-in",
+		level: "A2-B1",
+		description:
+			"Navigate real-world travel hiccups, booking adjustments, and conversational courtesies.",
+		suggestedDurationMins: 10,
+		tags: ["Everyday", "Travel"],
+	},
+	{
+		id: "topic-3",
+		title: "Academic Debate: Technological Automation & Ethics",
+		level: "C1-C2",
+		description:
+			"Formulate coherent argumentative theses and defend viewpoints with sophisticated transitions.",
+		suggestedDurationMins: 20,
+		tags: ["Academic", "Debate"],
+	},
+];
+
+export const CALL_HISTORY: SpeakingCall[] = [
+	{
+		id: "call-1",
+		callId: "CALL-9021",
+		topicId: "topic-1",
+		topicTitle: "Job Interview: Technical & Product Communication",
+		date: "21 August 2026",
+		duration: "14:20",
+		durationSeconds: 860,
+		status: "completed",
+		fluencyScore: 88,
+		vocabularyCount: 14,
+		pronunciationAccuracy: 92,
+	},
+	{
+		id: "call-2",
+		callId: "CALL-8840",
+		topicId: "topic-2",
+		topicTitle: "Travel Situations: Airport & Hotel Check-in",
+		date: "18 August 2026",
+		duration: "09:45",
+		durationSeconds: 585,
+		status: "completed",
+		fluencyScore: 92,
+		vocabularyCount: 9,
+		pronunciationAccuracy: 95,
+	},
+	{
+		id: "call-3",
+		callId: "CALL-7102",
+		topicId: "topic-2",
+		topicTitle: "Daily Routine & Hobbies Discussion",
+		date: "14 August 2026",
+		duration: "12:10",
+		durationSeconds: 730,
+		status: "completed",
+		fluencyScore: 85,
+		vocabularyCount: 11,
+		pronunciationAccuracy: 89,
+	},
+];
+
+export const CONNECTION_STEPS: Array<{
+	id: ConnectionStep;
+	label: string;
+}> = [
+	{ id: "permissions", label: "Verifying microphone & audio devices..." },
+	{
+		id: "ice_negotiation",
+		label: "Connecting to AI Teacher conversational server...",
+	},
+	{ id: "model_warmup", label: "Preparing B2 CEFR vocabulary context..." },
+	{ id: "ready", label: "Connection established. Launching session..." },
+];
+
+export const CONNECTION_ERRORS = {
+	mic_denied:
+		"Microphone access was denied. Please allow microphone permissions in your browser to continue.",
+	network_timeout:
+		"Unable to connect to speaking server after 15 seconds. Please check your internet connection.",
+} as const;
+
+export const TRANSCRIPT_FIXTURE: TranscriptSegment[] = [
+	{
+		id: "seg-1",
+		speaker: "teacher",
+		speakerName: "Elena",
+		text: "Hello! Welcome back to our technical discussion session. Today we are exploring systems architecture and trade-off rationalization.",
+		timestamp: "00:04",
+		highlightedTerms: ["systems architecture", "trade-off"],
+	},
+	{
+		id: "seg-2",
+		speaker: "user",
+		speakerName: "You",
+		text: "Thank you Elena. I'm excited to practice explaining asynchronous messaging architectures.",
+		timestamp: "00:18",
+	},
+	{
+		id: "seg-3",
+		speaker: "teacher",
+		speakerName: "Elena",
+		text: "Splendid! Could you describe how you managed consistency versus latency in your most recent cloud pipeline?",
+		timestamp: "00:32",
+		highlightedTerms: ["consistency", "latency"],
+	},
+];
+
+export const SAVED_PHRASES: SavedPhrase[] = [
+	{
+		id: "v-1",
+		term: "Trade-off",
+		phonetic: "/ˈtreɪd.ɒf/",
+		cefr: "B2",
+		definition:
+			"A balance achieved between two desirable but incompatible features; a compromise.",
+		savedAt: "14:25",
+	},
+	{
+		id: "v-2",
+		term: "Latency",
+		phonetic: "/ˈleɪ.tən.si/",
+		cefr: "C1",
+		definition:
+			"The delay before a transfer of data begins following an instruction for its transfer.",
+		savedAt: "14:26",
+	},
+];
+
+export const LIVE_CAPTION =
+	"Could you walk me through a challenging technical tradeoff you managed recently?";

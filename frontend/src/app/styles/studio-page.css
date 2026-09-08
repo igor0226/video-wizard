@@ -1,0 +1,43 @@
+.studioPage {
+	--background: 0 0% 100%;
+	--foreground: 0 0% 9%;
+	--card: 0 0% 100%;
+	--card-foreground: 0 0% 9%;
+	--popover: 0 0% 100%;
+	--popover-foreground: 0 0% 9%;
+	--primary: 0 0% 9%;
+	--primary-foreground: 0 0% 98%;
+	--secondary: 0 0% 96%;
+	--secondary-foreground: 0 0% 9%;
+	--muted: 0 0% 96%;
+	--muted-foreground: 0 0% 45%;
+	--accent: 0 0% 96%;
+	--accent-foreground: 0 0% 9%;
+	--border: 0 0% 90%;
+	--input: 0 0% 90%;
+	--ring: 0 0% 9%;
+
+	@apply min-h-screen bg-background text-foreground;
+}
+
+.callPage {
+	--background: 222 47% 4%;
+	--foreground: 220 27% 96%;
+	--card: 222 47% 8%;
+	--card-foreground: 220 27% 96%;
+	--popover: 222 47% 8%;
+	--popover-foreground: 220 27% 96%;
+	--primary: 0 0% 96%;
+	--primary-foreground: 0 0% 9%;
+	--secondary: 217 19% 17%;
+	--secondary-foreground: 220 27% 96%;
+	--muted: 217 19% 17%;
+	--muted-foreground: 218 11% 65%;
+	--accent: 217 19% 20%;
+	--accent-foreground: 220 27% 96%;
+	--border: 217 19% 20%;
+	--input: 217 19% 20%;
+	--ring: 0 0% 96%;
+
+	@apply min-h-screen bg-background text-foreground;
+}
