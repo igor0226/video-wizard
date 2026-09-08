@@ -1,5 +1,7 @@
 # Backend Agent Notes
 
+Nest.js backend for the **Language Learning Platform**. Today's modules implement the **Listening** skill (video upload, transcription, phrase detection, explanation clips, video composition, DASH playback). Planned modules will add Speaking (WebRTC signaling and session persistence), Writing (composition feedback), and Reading (comprehension practice).
+
 Make sure to read the AGENTS.md file in the parent direction.
 
 Run the app with Docker Compose from the repo root (`docker compose up --build`); see the parent [`AGENTS.md`](../AGENTS.md). Compose starts **postgres**, **minio**, **backend**, and **frontend**. FFmpeg is in the backend image when using Compose. The backend runs migrations on boot (`npm run migration:run`) before `start:dev`.

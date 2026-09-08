@@ -1,13 +1,37 @@
-# Language Learning with Video
+# Language Learning Platform
 
-Help learners study a foreign language from real video. Upload a clip in the language you are learning; the app returns a **longer, learner-friendly video** with burned-in subtitles, highlighted tricky phrases (idioms, collocations, hard grammar), and **short explanation inserts** that play right after the sentence containing each phrase.
+A language learning platform covering four core skills: **Writing**, **Listening**, **Speaking**, and **Reading**. Only **Listening** is implemented today; the other three skills are on the roadmap.
 
-A **Next.js** UI and **Nest.js** worker run locally. Playback is DASH (Vidstack + dash.js) of the *enriched* video, not the raw upload.
+A **Next.js** UI and **Nest.js** backend run locally. The Listening skill uploads real-world video and returns a **longer, learner-friendly output** with burned-in subtitles, highlighted tricky phrases (idioms, collocations, hard grammar), and **short explanation inserts** that play right after the sentence containing each phrase. Playback is DASH (Vidstack + dash.js) of the *enriched* video, not the raw upload.
 
 ![Main page screenshot](readme/main.png)
 ![Task list](readme/task-list.png)
 
 ## Purpose
+
+Help self-directed language learners build fluency across all four skills:
+
+- **Listening** *(implemented)* — comprehension from real-world video with automated transcription, phrase detection, and AI-generated explanation inserts
+- **Speaking** *(planned)* — live 1-on-1 conversational sessions with an AI language teacher (real-time captions, feedback, vocabulary tracking)
+- **Writing** *(planned)* — guided essay and short-form composition with AI feedback
+- **Reading** *(planned)* — leveled reading practice with comprehension support
+
+## Skills & Roadmap
+
+Target information architecture (from the platform design sketch):
+
+- `/dashboard` — unified progress overview, activity heatmap, goal tracking, recent activity
+- `/listening` — video library with filters, search, and status tracking
+- `/listening/upload` — standalone full-page video upload and language metadata configuration
+- `/listening/:videoId` — enriched video player, processing history, comprehension aids
+- `/speaking` — conversational session launcher, topic selector, call history
+- `/speaking/call/:callId` — live AI teacher call with captions, control dock, and vocabulary sheet
+- `/writing` — writing workspace (coming soon)
+- `/reading` — reading practice (planned)
+
+**Current implementation:** only the Listening skill is built. Today's routes (`/`, `/tasks/new`, `/tasks/[id]`) are the present Listening surface and will migrate to the `/listening/*` routes above.
+
+## Listening Pipeline
 
 On upload, the user chooses:
 
@@ -23,7 +47,7 @@ The pipeline then:
 4. composes a destination video: original footage + subtitle burn-in + phrase highlights + explanation clips spliced after the target sentence
 5. packages that enriched file as DASH for in-app playback
 
-Status is `pending` → `processing` → `ready` | `failed`. Local filesystem only (no cloud storage or database yet).
+Status is `pending` → `processing` → `ready` | `failed`.
 
 ## Tech Stack
 
@@ -43,7 +67,7 @@ Status is `pending` → `processing` → `ready` | `failed`. Local filesystem on
 - **Storage:** Local filesystem under repo-root `videos/`
 - **Local dev:** Docker Compose (`compose.yaml`)
 
-## Work Schema (Processing Flow)
+## Listening Work Schema (Processing Flow)
 
 1. User uploads a video with language settings via Nest `POST /api/videos/upload` (`pending`).
 2. Background worker (started when Nest boots) picks up jobs about every 15 seconds.
@@ -59,6 +83,19 @@ Status is `pending` → `processing` → `ready` | `failed`. Local filesystem on
 `pending -> processing -> ready | failed`
 
 ## App Routes (frontend)
+
+**Target platform routes** (planned IA):
+
+- `/dashboard` — progress overview and recent activity
+- `/listening` — video library
+- `/listening/upload` — standalone upload form
+- `/listening/:videoId` — video detail + DASH player
+- `/speaking` — AI teacher session launcher and call history
+- `/speaking/call/:callId` — live speaking call
+- `/writing` — writing workspace (coming soon)
+- `/reading` — reading practice (planned)
+
+**Current Listening routes** (implemented today):
 
 - `/` — tasks list
 - `/tasks/new` — upload form

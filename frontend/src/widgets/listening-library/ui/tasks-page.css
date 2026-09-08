@@ -1,0 +1,23 @@
+.tasksPage {
+	@apply px-8 py-8;
+}
+
+.tasksPageContent {
+	@apply grid gap-4;
+}
+
+.tasksPageError {
+	@apply m-0 text-sm text-destructive;
+}
+
+.tasksDetailContent {
+	@apply grid max-w-5xl gap-4;
+}
+
+.tasksDetailTitle {
+	@apply m-0 text-[22px];
+}
+
+.tasksDetailMeta {
+	@apply m-0 text-sm text-muted-foreground;
+}

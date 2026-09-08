@@ -1,0 +1,23 @@
+.speakingPage {
+	@apply mx-auto max-w-7xl space-y-8 px-8 py-8;
+}
+
+.speakingLauncher {
+	@apply grid grid-cols-1 gap-8 lg:grid-cols-12;
+}
+
+.topicGrid {
+	@apply grid grid-cols-1 gap-3 sm:grid-cols-3;
+}
+
+.topicCard {
+	@apply cursor-pointer rounded-xl border border-border p-4 text-left transition-colors hover:border-foreground/40;
+}
+
+.topicCardSelected {
+	@apply border-foreground bg-muted/80;
+}
+
+.micMeter {
+	@apply flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-muted;
+}

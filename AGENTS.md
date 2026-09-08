@@ -1,12 +1,19 @@
-# Language Learning with Video — Agent Notes
+# Language Learning Platform — Agent Notes
 
 Shared monorepo context. Package-specific guidance lives in [`frontend/AGENTS.md`](frontend/AGENTS.md) and [`backend/AGENTS.md`](backend/AGENTS.md).
 
 ## Goal
 
-Help users learn foreign languages from videos. A user uploads a source video in a chosen language and receives a **longer, learner-friendly output video** with on-screen subtitles, visually marked tricky phrases (idioms, collocations, grammatically hard constructions), and **inserted explanation segments** that play right after the sentence containing each target phrase ends.
+Build a language learning platform that helps self-directed learners acquire fluency across four core skills:
 
-Language inputs (selected per upload):
+- **Listening** *(implemented)* — comprehension from real-world video with automated transcription, phrase detection, and AI-generated explanation inserts
+- **Speaking** *(planned)* — live 1-on-1 conversational sessions with an AI language teacher (real-time captions, feedback, vocabulary tracking)
+- **Writing** *(planned)* — guided essay and short-form composition with AI feedback
+- **Reading** *(planned)* — leveled reading practice with comprehension support
+
+Only **Listening** is built today. The other three skills are on the roadmap.
+
+Language inputs for Listening uploads (selected per upload):
 
 - **Video language** — the source language spoken in the upload (`sourceLanguage` on upload).
 - **Explanation language** — the language for AI-generated explanations and TTS narration (`explanationLanguage` on upload).
@@ -14,7 +21,15 @@ Language inputs (selected per upload):
 
 ## Target scenario
 
-A user uploads a video and selects the video language and explanation language. The pipeline transcribes the speech, identifies learner-relevant phrases, and uses AI to write short explanations in the explanation language. Each explanation is turned into TTS audio and paired with a simple text slide. FFmpeg composes the **destination video**: original footage with burned-in subtitles and phrase highlights, plus explanation inserts (text slide + TTS) appended after each target sentence ends. The enriched video is longer than the original. The user watches it in the app via DASH playback.
+A learner uses the platform to practice all four skills. Today, only the Listening skill is available:
+
+**Listening (implemented):** A user uploads a video and selects the video language and explanation language. The pipeline transcribes the speech, identifies learner-relevant phrases, and uses AI to write short explanations in the explanation language. Each explanation is turned into TTS audio and paired with a simple text slide. FFmpeg composes the **destination video**: original footage with burned-in subtitles and phrase highlights, plus explanation inserts (text slide + TTS) appended after each target sentence ends. The enriched video is longer than the original. The user watches it in the app via DASH playback.
+
+**Speaking (planned):** Live 1-on-1 simulated conversational sessions with an AI language teacher featuring real-time captioning, conversational feedback, and interactive vocabulary tracking.
+
+**Writing (planned):** Guided essay and short-form composition feedback.
+
+**Reading (planned):** Leveled reading practice with comprehension support.
 
 ## Architecture
 
@@ -24,7 +39,19 @@ A user uploads a video and selects the video language and explanation language. 
 - `compose.yaml` — Docker Compose dev stack (frontend + backend, hot reload)
 - Root `package.json` — husky/commitlint and `npm run dev` (`docker compose up`)
 
-### Artifacts
+### Skills
+
+| Skill | Status | Target routes | Current modules |
+|---|---|---|---|
+| **Listening** | Implemented | `/listening`, `/listening/upload`, `/listening/:videoId` | `videos/`, `processing/`, `dash/`, `storage/` |
+| **Speaking** | Planned | `/speaking`, `/speaking/call/:callId` | — (WebRTC signaling, session persistence TBD) |
+| **Writing** | Planned | `/writing` | — (composition feedback TBD) |
+| **Reading** | Planned | `/reading` | — (reading practice TBD) |
+| **Dashboard** | Planned | `/dashboard` | — (cross-skill analytics TBD) |
+
+Today's frontend routes (`/`, `/tasks/new`, `/tasks/[id]`) implement the Listening skill and will migrate to `/listening/*`.
+
+### Artifacts (Listening skill)
 
 Target blob outputs in S3/MinIO (same key layout as the former repo-root `videos/` tree):
 
@@ -37,7 +64,7 @@ Target blob outputs in S3/MinIO (same key layout as the former repo-root `videos
 
 Video metadata lives in PostgreSQL. Legacy `videos/records/*.json` may still exist locally for one-time backfill only.
 
-## Product flow
+## Product flow (Listening skill)
 
 1. Upload via Nest `POST /api/videos/upload` with source file and language settings → record created as `pending`.
 2. Backend worker transcribes speech to text with word/segment timestamps.
@@ -63,9 +90,9 @@ The browser calls Nest directly (no Next.js API proxy).
 - **Hard rule:** ask questions if something from the user's instruction seems not clear enough.
 - **Hard rule:** always run `nvm use` before host Node commands (lint, test, commit hooks).
 - FFmpeg is provided by the backend Docker image when using Compose. On the host (without Docker), FFmpeg must be on system `PATH` for DASH packaging and video compositing (burn-in subtitles, phrase highlights, splice explanation clips at sentence boundaries derived from transcript timestamps).
-- **Transcription:** Whisper (or equivalent) for speech-to-text with timed word/segment output.
-- **Phrase analysis + explanations:** LLM (e.g. OpenAI) to flag idioms, collocations, and grammatically tricky phrases and generate learner explanations in the explanation language.
-- **TTS:** explanation text is spoken via TTS (provider TBD); locale follows the explanation language.
+- **Transcription (Listening):** Whisper (or equivalent) for speech-to-text with timed word/segment output.
+- **Phrase analysis + explanations (Listening):** LLM (e.g. OpenAI) to flag idioms, collocations, and grammatically tricky phrases and generate learner explanations in the explanation language.
+- **TTS (Listening):** explanation text is spoken via TTS (provider TBD); locale follows the explanation language.
 - **Language params** travel with the upload record and drive prompt and TTS locale selection.
 - No authentication/authorization layer yet.
 - Defaults: frontend `http://localhost:3000`, backend `http://localhost:3001`.

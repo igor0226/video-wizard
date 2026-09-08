@@ -1,6 +1,6 @@
 # Frontend
 
-Next.js 14 App Router UI for the local video streaming app: task list, upload form, and DASH playback via Vidstack + dash.js.
+Next.js 14 App Router UI for the **Language Learning Platform**. The current routes implement the **Listening** skill: task list, upload form, and DASH playback via Vidstack + dash.js. Planned surfaces add Dashboard, Speaking (AI teacher call), Writing, and Reading.
 
 The browser talks to the Nest backend directly (`NEXT_PUBLIC_API_URL`).
 
@@ -38,6 +38,19 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
 ## Routes
+
+**Target platform routes** (planned IA):
+
+- `/dashboard` — progress overview and recent activity
+- `/listening` — video library
+- `/listening/upload` — standalone upload form
+- `/listening/:videoId` — video detail + DASH player
+- `/speaking` — AI teacher session launcher and call history
+- `/speaking/call/:callId` — live speaking call
+- `/writing` — writing workspace (coming soon)
+- `/reading` — reading practice (planned)
+
+**Current Listening routes** (implemented today):
 
 - `/` — tasks list
 - `/tasks/new` — upload form
