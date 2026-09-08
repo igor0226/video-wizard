@@ -1,4 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BlobStorageService } from "../../storage";
 import type { MediaWorkspace } from "../shared/media-workspace.service";
@@ -70,10 +74,13 @@ describe("ExplanationClipService", () => {
 	let explanationTtsService: ExplanationTtsService;
 	let workspace: MediaWorkspace;
 	let mediaWorkspace: MediaWorkspaceService;
+	let workspaceDir: string;
 
-	beforeEach(() => {
+	beforeEach(async () => {
 		vi.clearAllMocks();
 		delete process.env.CLIP_GENERATION_CONCURRENCY;
+		workspaceDir = await mkdtemp(path.join(tmpdir(), "explanation-clip-spec-"));
+		await mkdir(path.join(workspaceDir, "clips"), { recursive: true });
 		vi.mocked(probeLoudnormStats).mockImplementation(async (absolutePath) => {
 			if (absolutePath.includes("source.mp4")) {
 				return SOURCE_LOUDNESS;
@@ -82,10 +89,10 @@ describe("ExplanationClipService", () => {
 			return TTS_LOUDNESS;
 		});
 		workspace = {
-			dir: "/tmp/workspace",
-			download: vi.fn(async () => "/tmp/workspace/source/source.mp4"),
-			localPath: vi.fn(
-				async (relative: string) => `/tmp/workspace/${relative}`,
+			dir: workspaceDir,
+			download: vi.fn(async () => path.join(workspaceDir, "source/source.mp4")),
+			localPath: vi.fn(async (relative: string) =>
+				path.join(workspaceDir, relative),
 			),
 			upload: vi.fn(async () => undefined),
 			uploadDir: vi.fn(async () => undefined),
@@ -125,6 +132,10 @@ describe("ExplanationClipService", () => {
 			explanationTtsService,
 			mediaWorkspace,
 		);
+	});
+
+	afterEach(async () => {
+		await rm(workspaceDir, { recursive: true, force: true });
 	});
 
 	it("writes an empty clips manifest when no phrases were detected", async () => {
@@ -196,10 +207,10 @@ describe("ExplanationClipService", () => {
 		});
 		expect(probeLoudnormStats).toHaveBeenCalledTimes(2);
 		expect(probeLoudnormStats).toHaveBeenCalledWith(
-			"/tmp/workspace/source/source.mp4",
+			path.join(workspaceDir, "source/source.mp4"),
 		);
 		expect(probeLoudnormStats).toHaveBeenCalledWith(
-			"/tmp/workspace/clips/000.mp3",
+			path.join(workspaceDir, "clips/000.mp3"),
 		);
 		expect(vi.mocked(runProcess).mock.calls).toHaveLength(2);
 		const concatArgs = vi.mocked(runProcess).mock.calls[0]?.[1] ?? [];
@@ -248,7 +259,7 @@ describe("ExplanationClipService", () => {
 		expect(explanationTtsService.resolveClosingAudio).toHaveBeenCalledTimes(1);
 		expect(explanationTtsService.synthesizeSpeech).toHaveBeenCalledTimes(2);
 		expect(workspace.uploadDir).toHaveBeenCalledWith({
-			localDir: "/tmp/workspace/clips",
+			localDir: path.join(workspaceDir, "clips"),
 			prefix: "explanations/video-1/clips",
 		});
 		expect(blobStorage.writeJson).toHaveBeenCalledWith(
