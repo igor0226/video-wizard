@@ -6,6 +6,7 @@ import { FfmpegDashService } from "./processing/dash-encoding/ffmpeg-dash.servic
 import { JobsService } from "./processing/jobs.service";
 import { ProcessingWorkerService } from "./processing/processing.service";
 import { WhisperTranscriptionService } from "./processing/transcribing/transcription.service";
+import { SpeakingService } from "./speaking/speaking.service";
 import { BlobStorageService, VideoRepositoryService } from "./storage";
 import { VideosService } from "./videos/videos.service";
 import { createTestApp } from "../test/create-test-app";
@@ -45,6 +46,7 @@ describe("AppModule", () => {
 
 	it("resolves core providers from the DI container", () => {
 		expect(moduleRef.get(VideosService)).toBeDefined();
+		expect(moduleRef.get(SpeakingService)).toBeDefined();
 		expect(moduleRef.get(DashService)).toBeDefined();
 		expect(moduleRef.get(JobsService)).toBeDefined();
 		expect(moduleRef.get(FfmpegDashService)).toBeDefined();

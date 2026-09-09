@@ -44,7 +44,7 @@ A learner uses the platform to practice all four skills. Today, only the Listeni
 | Skill | Status | Target routes | Current modules |
 |---|---|---|---|
 | **Listening** | Implemented | `/listening`, `/listening/upload`, `/listening/:videoId` | `videos/`, `processing/`, `dash/`, `storage/` |
-| **Speaking** | Planned | `/speaking`, `/speaking/call/:callId` | — (WebRTC signaling, session persistence TBD) |
+| **Speaking** | Implemented (server) | `/speaking`, `/speaking/call/:callId` | `speaking/` (Nest) + LiveKit agent worker |
 | **Writing** | Planned | `/writing` | — (composition feedback TBD) |
 | **Reading** | Planned | `/reading` | — (reading practice TBD) |
 | **Dashboard** | Planned | `/dashboard` | — (cross-skill analytics TBD) |

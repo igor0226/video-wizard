@@ -44,7 +44,7 @@ export async function resetPostgresTables(): Promise<void> {
 	const dataSource = await getDataSource();
 	await dataSource.initialize();
 	await dataSource.query(
-		'TRUNCATE TABLE "processing_locks", "processing_history", "videos" RESTART IDENTITY CASCADE',
+		'TRUNCATE TABLE "processing_locks", "processing_history", "videos", "teacher_calls" RESTART IDENTITY CASCADE',
 	);
 	await dataSource.destroy();
 }

@@ -1,7 +1,12 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 
-import { ProcessingHistory, ProcessingLock, Video } from "../models";
+import {
+	ProcessingHistory,
+	ProcessingLock,
+	TeacherCall,
+	Video,
+} from "../models";
 import { getPostgresConfig } from "./utils/postgres-config";
 
 @Module({
@@ -10,7 +15,7 @@ import { getPostgresConfig } from "./utils/postgres-config";
 			useFactory: () => ({
 				type: "postgres" as const,
 				...getPostgresConfig(),
-				entities: [Video, ProcessingHistory, ProcessingLock],
+				entities: [Video, ProcessingHistory, ProcessingLock, TeacherCall],
 				synchronize: false,
 				autoLoadEntities: false,
 			}),
