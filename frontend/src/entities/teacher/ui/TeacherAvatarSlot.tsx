@@ -1,6 +1,8 @@
-import { Radio, User, Volume2 } from "lucide-react";
+import { User } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
+import { AvatarMedia } from "./AvatarMedia";
+import { TeacherAvatarStatusBadge } from "./TeacherAvatarStatusBadge";
 import "./TeacherAvatarSlot.css";
 
 export type TeacherAvatarStatus =
@@ -52,64 +54,7 @@ export function TeacherAvatarSlot({
 					<span className="text-xs font-medium">{fallbackLabel}</span>
 				</div>
 			) : null}
-			<StatusBadge status={status} />
+			<TeacherAvatarStatusBadge status={status} />
 		</section>
 	);
-}
-
-function AvatarMedia({
-	media,
-	label,
-	isCallStage,
-}: {
-	media?: TeacherAvatarSlotProps["media"];
-	label: string;
-	isCallStage: boolean;
-}) {
-	if (!media?.src) {
-		return null;
-	}
-	const fitClass = isCallStage
-		? "h-full w-full object-contain"
-		: "h-full w-full object-cover";
-	if (media.type === "video") {
-		return (
-			<video
-				src={media.src}
-				autoPlay
-				playsInline
-				muted
-				loop
-				className={fitClass}
-			/>
-		);
-	}
-	return (
-		<img
-			src={media.src}
-			alt={media.alt || label}
-			className={fitClass}
-			referrerPolicy="no-referrer"
-		/>
-	);
-}
-
-function StatusBadge({ status }: { status: TeacherAvatarStatus }) {
-	if (status === "speaking") {
-		return (
-			<div className="teacherSlotBadge" aria-hidden>
-				<Volume2 className="h-3.5 w-3.5 animate-pulse" />
-				Speaking
-			</div>
-		);
-	}
-	if (status === "connecting") {
-		return (
-			<div className="teacherSlotBadge" aria-hidden>
-				<Radio className="h-3.5 w-3.5 animate-spin" />
-				Handshake...
-			</div>
-		);
-	}
-	return null;
 }

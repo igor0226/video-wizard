@@ -5,21 +5,16 @@ import type {
 	SavedPhrase,
 } from "@/entities/speaking-session";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import {
-	LIVE_CAPTION,
-	SAVED_PHRASES,
-	TRANSCRIPT_FIXTURE,
-} from "@/entities/speaking-session";
-import { TeacherAvatarSlot } from "@/entities/teacher";
+import { SAVED_PHRASES, TRANSCRIPT_FIXTURE } from "@/entities/speaking-session";
 import { saveCallPhrase } from "@/features/save-call-phrase";
-import { CallControlDock } from "./CallControlDock";
+import { CallStage } from "./CallStage";
 import { CallStatusBar } from "./CallStatusBar";
 import { EndCallDialog } from "./EndCallDialog";
-import { LiveCaptions } from "./LiveCaptions";
-import { SelfViewPreview } from "./SelfViewPreview";
 import { StudyDrawer } from "./StudyDrawer";
+import { useCallShortcuts } from "./useCallShortcuts";
+import { useSessionTimer } from "./useSessionTimer";
 
 type CallConnectedViewProps = {
 	topicTitle: string;
@@ -91,82 +86,4 @@ export function CallConnectedView({
 			/>
 		</div>
 	);
-}
-
-function CallStage({
-	controls,
-	onToggle,
-	onEndCall,
-}: {
-	controls: CallControlState;
-	onToggle: (
-		key: "isMuted" | "isVideoOff" | "isCaptionsOn" | "isPanelOpen",
-	) => void;
-	onEndCall: () => void;
-}) {
-	return (
-		<div className="callStage">
-			<div className="callStageCanvas">
-				<TeacherAvatarSlot
-					size="call-stage"
-					status="speaking"
-					fallbackLabel="Elena (AI Instructor)"
-				/>
-				<SelfViewPreview
-					isCameraOff={controls.isVideoOff}
-					isMuted={controls.isMuted}
-				/>
-				<LiveCaptions text={LIVE_CAPTION} visible={controls.isCaptionsOn} />
-			</div>
-			<CallControlDock
-				controls={controls}
-				onToggleMute={() => onToggle("isMuted")}
-				onToggleCamera={() => onToggle("isVideoOff")}
-				onToggleCaptions={() => onToggle("isCaptionsOn")}
-				onTogglePanel={() => onToggle("isPanelOpen")}
-				onEndCall={onEndCall}
-			/>
-		</div>
-	);
-}
-
-function useSessionTimer(
-	setSeconds: (updater: (value: number) => number) => void,
-) {
-	useEffect(() => {
-		const interval = window.setInterval(() => {
-			setSeconds((value) => value + 1);
-		}, 1000);
-		return () => window.clearInterval(interval);
-	}, [setSeconds]);
-}
-
-function useCallShortcuts(
-	setControls: React.Dispatch<React.SetStateAction<CallControlState>>,
-	onEnd: () => void,
-) {
-	useEffect(() => {
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "m" || event.key === "M") {
-				setControls((current) => ({ ...current, isMuted: !current.isMuted }));
-			}
-			if (event.key === "v" || event.key === "V") {
-				setControls((current) => ({
-					...current,
-					isVideoOff: !current.isVideoOff,
-				}));
-			}
-			if (event.key === "c" || event.key === "C") {
-				setControls((current) => ({
-					...current,
-					isCaptionsOn: !current.isCaptionsOn,
-				}));
-			}
-			if (event.key === "Escape") {
-				onEnd();
-			}
-		};
-		window.addEventListener("keydown", onKeyDown);
-		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [onEnd, setControls]);
 }

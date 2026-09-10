@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
+import { CallControlToggleButton } from "./CallControlToggleButton";
 
 type CallControlDockProps = {
 	controls: CallControlState;
@@ -33,71 +34,46 @@ export function CallControlDock({
 	return (
 		<div className="callDock">
 			<div className="callDockInner">
-				<ToggleButton
+				<CallControlToggleButton
 					label={controls.isMuted ? "Unmute microphone" : "Mute microphone"}
 					pressed={controls.isMuted}
 					onClick={onToggleMute}
 				>
 					{controls.isMuted ? <MicOff /> : <Mic />}
-				</ToggleButton>
-				<ToggleButton
+				</CallControlToggleButton>
+				<CallControlToggleButton
 					label={controls.isVideoOff ? "Turn camera on" : "Turn camera off"}
 					pressed={controls.isVideoOff}
 					onClick={onToggleCamera}
 				>
 					{controls.isVideoOff ? <VideoOff /> : <Video />}
-				</ToggleButton>
-				<ToggleButton
+				</CallControlToggleButton>
+				<CallControlToggleButton
 					label="Toggle captions"
 					pressed={controls.isCaptionsOn}
 					onClick={onToggleCaptions}
 				>
 					<Subtitles />
-				</ToggleButton>
-				<ToggleButton
+				</CallControlToggleButton>
+				<CallControlToggleButton
 					label="Toggle learning drawer"
 					pressed={controls.isPanelOpen}
 					onClick={onTogglePanel}
 				>
 					<BookMarked />
-				</ToggleButton>
-				<ToggleButton
+				</CallControlToggleButton>
+				<CallControlToggleButton
 					label="Device settings"
 					pressed={false}
 					onClick={() => {}}
 				>
 					<Settings />
-				</ToggleButton>
+				</CallControlToggleButton>
 				<Button type="button" onClick={onEndCall} aria-label="End Call">
 					<PhoneOff className="mr-2 h-4 w-4" />
 					End Call
 				</Button>
 			</div>
 		</div>
-	);
-}
-
-function ToggleButton({
-	label,
-	pressed,
-	onClick,
-	children,
-}: {
-	label: string;
-	pressed: boolean;
-	onClick: () => void;
-	children: React.ReactNode;
-}) {
-	return (
-		<Button
-			type="button"
-			size="icon"
-			variant={pressed ? "secondary" : "ghost"}
-			aria-label={label}
-			aria-pressed={pressed}
-			onClick={onClick}
-		>
-			{children}
-		</Button>
 	);
 }
