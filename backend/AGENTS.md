@@ -167,7 +167,7 @@ These are stored on the video record (Postgres) and passed into the phrase-detec
 
 ### Speaking (AI teacher)
 
-Self-hosted LiveKit (`livekit` in Compose) plus a Node agent worker (`teacher-agent` in Compose, `npm run start:agent`).
+Self-hosted LiveKit (`livekit` in Compose) plus a Node agent worker (`teacher-agent` in Compose, `npm run start:agent:dev`).
 
 - `POST /api/speaking/calls` — stub auth via `userId`; creates a `teacher_calls` row, LiveKit room, agent dispatch, and participant token. Returns `{ callId, roomName, token, livekitUrl }`.
 - `GET /api/speaking/calls/:id?userId=` — owner-scoped call status.

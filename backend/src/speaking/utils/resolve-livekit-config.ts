@@ -26,8 +26,8 @@ export function resolveLivekitConfig(): LivekitConfig {
 	return {
 		url,
 		apiUrl,
-		apiKey: requiredEnv("LIVEKIT_API_KEY", "devkey"),
-		apiSecret: requiredEnv("LIVEKIT_API_SECRET", "secret"),
+		apiKey: requiredEnv("LIVEKIT_API_KEY"),
+		apiSecret: requiredEnv("LIVEKIT_API_SECRET"),
 		agentName: process.env.SPEAKING_AGENT_NAME?.trim() || "teacher-agent",
 		tokenTtl: process.env.SPEAKING_CALL_TOKEN_TTL?.trim() || "1h",
 		emptyRoomTimeoutSeconds: Number(

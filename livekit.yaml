@@ -6,8 +6,10 @@ rtc:
   port_range_start: 50000
   port_range_end: 50020
   use_external_ip: false
-# API key/secret are injected by Compose as LIVEKIT_KEYS.
-# webhook.api_key is filled from LIVEKIT_API_KEY when Compose renders this file.
+# API key/secret are filled from backend/.env when Compose renders this file.
+development: true
+keys:
+  "__LIVEKIT_API_KEY__": "__LIVEKIT_API_SECRET__"
 logging:
   level: info
 room:

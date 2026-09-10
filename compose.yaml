@@ -60,29 +60,13 @@ services:
       - path: ./backend/.env
         required: false
     environment:
-      PORT: "3001"
-      CORS_ORIGIN: http://localhost:3000
       S3_ENDPOINT: http://minio:9000
-      S3_REGION: us-east-1
-      S3_BUCKET: ${S3_BUCKET:-video-streaming}
-      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
-      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      S3_FORCE_PATH_STYLE: "true"
-      MEDIA_WORKSPACE_ROOT: /tmp/video-streaming-workspace
       POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-video_streaming}
+      LIVEKIT_API_URL: http://livekit:7880
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "300"
       TSC_WATCHFILE: UsePolling
       NODE_ENV: development
-      LIVEKIT_URL: ws://localhost:7880
-      LIVEKIT_API_URL: http://livekit:7880
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
-      SPEAKING_AGENT_NAME: teacher-agent
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
@@ -100,15 +84,20 @@ services:
 
   livekit-config:
     image: busybox:1.37
-    environment:
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+    env_file:
+      - path: ./backend/.env
+        required: false
     volumes:
       - ./livekit.yaml:/template/livekit.yaml:ro
       - livekit_rendered:/rendered
     command:
       - sh
       - -c
-      - sed "s/__LIVEKIT_API_KEY__/$$LIVEKIT_API_KEY/g" /template/livekit.yaml > /rendered/livekit.yaml
+      - |
+        KEY="$${LIVEKIT_API_KEY:-devkey}"
+        SECRET="$${LIVEKIT_API_SECRET:-local_livekit_secret_do_not_use_prod}"
+        sed -e "s|__LIVEKIT_API_KEY__|$$KEY|g" -e "s|__LIVEKIT_API_SECRET__|$$SECRET|g" \
+          /template/livekit.yaml > /rendered/livekit.yaml
 
   livekit:
     image: livekit/livekit-server:v1.9.1
@@ -117,10 +106,6 @@ services:
       - "7880:7880"
       - "7881:7881"
       - "50000-50020:50000-50020/udp"
-    environment:
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
-      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}"
     volumes:
       - livekit_rendered:/config:ro
     depends_on:
@@ -136,12 +121,6 @@ services:
         required: false
     environment:
       LIVEKIT_URL: ws://livekit:7880
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
-      SPEAKING_AGENT_NAME: teacher-agent
-      SPEAKING_TEACHER_MODEL: gpt-realtime
-      SPEAKING_TEACHER_VOICE: coral
-      SPEAKING_REACTION_DEBOUNCE_MS: "800"
       CHOKIDAR_USEPOLLING: "true"
       NODE_ENV: development
     volumes:
@@ -150,7 +129,7 @@ services:
     depends_on:
       livekit:
         condition: service_started
-    command: npm run start:agent
+    command: npm run start:agent:dev
     init: true
     tty: true
 
