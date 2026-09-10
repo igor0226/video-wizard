@@ -1,0 +1,20 @@
+port: 7880
+bind_addresses:
+  - 0.0.0.0
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50020
+  use_external_ip: false
+# API key/secret are filled from backend/.env when Compose renders this file.
+development: true
+keys:
+  "__LIVEKIT_API_KEY__": "__LIVEKIT_API_SECRET__"
+logging:
+  level: info
+room:
+  empty_timeout: 60
+webhook:
+  api_key: "__LIVEKIT_API_KEY__"
+  urls:
+    - "http://backend:3001/api/speaking/livekit/webhook"

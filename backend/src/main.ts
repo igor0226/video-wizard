@@ -4,7 +4,10 @@ import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-	const app = await NestFactory.create(AppModule, { bufferLogs: true });
+	const app = await NestFactory.create(AppModule, {
+		bufferLogs: true,
+		rawBody: true,
+	});
 	app.useLogger(app.get(Logger));
 
 	const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:3000";

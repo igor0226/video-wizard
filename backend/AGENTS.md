@@ -11,10 +11,11 @@ Run the app with Docker Compose from the repo root (`docker compose up --build`)
 Nest.js app under `src/` with feature modules:
 
 - `videos/` — list/upload/status HTTP API
+- `speaking/` — AI teacher call HTTP API (create/end/status) + LiveKit token/room/dispatch + agent worker (`src/speaking/agent/`)
 - `processing/` — cron worker, jobs, FFmpeg DASH generation, audio extraction, Whisper transcription, phrase detection, explanation clip generation, video composition
 - `dash/` — manifest rewrite + segment serving
 - `storage/` — `BlobStorageService` (S3/MinIO object keys) + Postgres-backed repositories/services
-- `models/` — TypeORM entity declarations (`Video`, `ProcessingHistory`, `ProcessingLock`)
+- `models/` — TypeORM entity declarations (`Video`, `ProcessingHistory`, `ProcessingLock`, `TeacherCall`)
 - `database/` — TypeORM wiring, migrations, backfill script
 
 `main.ts` sets Pino app logger, CORS, global `api` prefix, port `3001`. Worker starts on boot via `ProcessingWorkerService` (`OnModuleInit`) and polls about every 15s.
@@ -47,6 +48,7 @@ In Docker Compose, backend uses `POSTGRES_HOST=postgres`. Host dev defaults to `
 - `videos` — video metadata (`VideoRecord` fields)
 - `processing_history` — per-video step history (`currentStep`, `events` jsonb)
 - `processing_locks` — worker concurrency guard (row insert = acquire, PK = one lock per video)
+- `teacher_calls` — speaking-skill AI teacher call records (`TeacherCallRecord` fields)
 
 Domain types live in [`src/storage/types.ts`](src/storage/types.ts). Entities mirror those types; ISO date/bigint transformers are in `src/models/utils/`.
 
@@ -162,6 +164,18 @@ These are stored on the video record (Postgres) and passed into the phrase-detec
 - `VIDEO_PROCESSING_CRON_ENABLED` — set to `false` to skip cron scheduling and the startup tick (used in tests and local API-only runs). Default: enabled (`true` in `.env.example`).
 - `VIDEO_PROCESSOR_CRON` — cron expression for the worker loop (default every 15s).
 - `CLIP_GENERATION_CONCURRENCY` — max number of explanation clips rendered in parallel per video (default `3`, minimum `1`).
+
+### Speaking (AI teacher)
+
+Self-hosted LiveKit (`livekit` in Compose) plus a Node agent worker (`teacher-agent` in Compose, `npm run start:agent:dev`).
+
+- `POST /api/speaking/calls` — stub auth via `userId`; creates a `teacher_calls` row, LiveKit room, agent dispatch, and participant token. Returns `{ callId, roomName, token, livekitUrl }`.
+- `GET /api/speaking/calls/:id?userId=` — owner-scoped call status.
+- `POST /api/speaking/calls/:id/end` — owner-scoped end; deletes the LiveKit room and marks the call `ended`.
+- `POST /api/speaking/livekit/webhook` — LiveKit `room_finished` / `participant_left` reconciliation.
+- Agent publishes teacher audio into the room and emotion JSON on data topic `teacher-emotion` (`source: "reply" | "reaction"`).
+
+Env: `LIVEKIT_URL` (browser-facing), `LIVEKIT_API_URL` (Nest Room/Dispatch API, defaults to `http` form of `LIVEKIT_URL`), `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `SPEAKING_AGENT_NAME`, `SPEAKING_TEACHER_MODEL`, `SPEAKING_TEACHER_VOICE`, `SPEAKING_CALL_TOKEN_TTL`, `SPEAKING_EMPTY_ROOM_TIMEOUT_SECONDS`.
 
 ## Validation
 

@@ -10,6 +10,16 @@ export const isoDateTransformer: ValueTransformer = {
 	from: (value: Date | null) => value?.toISOString() ?? "",
 };
 
+export const nullableIsoDateTransformer: ValueTransformer = {
+	to: (value: string | Date | null | undefined) => {
+		if (value == null) {
+			return null;
+		}
+		return value instanceof Date ? value : new Date(value);
+	},
+	from: (value: Date | null) => (value ? value.toISOString() : null),
+};
+
 export const bigintTransformer: ValueTransformer = {
 	to: (value: number) => value,
 	from: (value: string | number) =>

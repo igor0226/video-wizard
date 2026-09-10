@@ -58,6 +58,29 @@ export type ProcessingHistoryEvent = {
 	message?: string;
 };
 
+export type TeacherCallStatus = "active" | "ended" | "failed";
+
+export type TeacherCallRecord = {
+	id: string;
+	userId: string;
+	roomName: string;
+	status: TeacherCallStatus;
+	sourceLanguage: string;
+	languageLevel: LanguageLevel;
+	explanationLanguage: string | null;
+	agentDispatchId: string | null;
+	endedReason: string | null;
+	createdAt: string;
+	endedAt: string | null;
+};
+
+export type CreateTeacherCallInput = {
+	userId: string;
+	sourceLanguage: string;
+	languageLevel: LanguageLevel;
+	explanationLanguage?: string;
+};
+
 export type VideoProcessingHistory = {
 	videoId: string;
 	currentStep: ProcessingStep;

@@ -6,6 +6,7 @@ import { ConfigModule } from "@nestjs/config";
 import { DatabaseModule } from "./database/database.module";
 import { DashModule } from "./dash/dash.module";
 import { ProcessingModule } from "./processing/processing.module";
+import { SpeakingModule } from "./speaking/speaking.module";
 import { StorageModule } from "./storage";
 import { VideosModule } from "./videos/videos.module";
 
@@ -32,6 +33,7 @@ import { VideosModule } from "./videos/videos.module";
 		}),
 		StorageModule,
 		VideosModule,
+		SpeakingModule,
 		DashModule,
 		ProcessingModule,
 	],

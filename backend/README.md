@@ -1,6 +1,6 @@
 # Backend
 
-Nest.js API and background worker for the **Language Learning Platform**. The current API and processing worker implement the **Listening** skill: video upload, S3/MinIO-backed blob storage, FFmpeg DASH processing, and manifest/segment serving. Planned modules will add Speaking, Writing, and Reading endpoints.
+Nest.js API and background worker for the **Language Learning Platform**. The current API and processing worker implement the **Listening** skill (video upload, S3/MinIO-backed blob storage, FFmpeg DASH processing, and manifest/segment serving) and the **Speaking** skill (AI teacher calls via LiveKit + OpenAI Realtime).
 
 ## Prerequisites
 
@@ -35,7 +35,10 @@ npm run start:dev
 - `GET /api/videos` — list videos
 - `GET /api/videos/:id` — video status/detail
 - `GET /api/dash/:id/manifest.mpd` — DASH manifest (BaseURL rewritten at serve time)
-- `GET /api/dash/:id/segment/*` — DASH segments
+- `POST /api/speaking/calls` — create an AI teacher call (`userId`, `sourceLanguage`, `languageLevel`, optional `explanationLanguage`); returns LiveKit `token` + `livekitUrl`
+- `GET /api/speaking/calls/:id?userId=` — call status
+- `POST /api/speaking/calls/:id/end` — end the call
+- `POST /api/speaking/livekit/webhook` — LiveKit room lifecycle webhook
 
 ## Object storage
 

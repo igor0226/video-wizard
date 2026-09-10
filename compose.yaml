@@ -60,20 +60,9 @@ services:
       - path: ./backend/.env
         required: false
     environment:
-      PORT: "3001"
-      CORS_ORIGIN: http://localhost:3000
       S3_ENDPOINT: http://minio:9000
-      S3_REGION: us-east-1
-      S3_BUCKET: ${S3_BUCKET:-video-streaming}
-      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
-      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      S3_FORCE_PATH_STYLE: "true"
-      MEDIA_WORKSPACE_ROOT: /tmp/video-streaming-workspace
       POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-video_streaming}
+      LIVEKIT_API_URL: http://livekit:7880
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "300"
       TSC_WATCHFILE: UsePolling
@@ -87,7 +76,60 @@ services:
         condition: service_healthy
       minio-setup:
         condition: service_completed_successfully
+      livekit:
+        condition: service_started
     command: sh -c "npm run migration:run && npm run start:dev"
+    init: true
+    tty: true
+
+  livekit-config:
+    image: busybox:1.37
+    env_file:
+      - path: ./backend/.env
+        required: false
+    volumes:
+      - ./livekit.yaml:/template/livekit.yaml:ro
+      - livekit_rendered:/rendered
+    command:
+      - sh
+      - -c
+      - |
+        KEY="$${LIVEKIT_API_KEY:-devkey}"
+        SECRET="$${LIVEKIT_API_SECRET:-local_livekit_secret_do_not_use_prod}"
+        sed -e "s|__LIVEKIT_API_KEY__|$$KEY|g" -e "s|__LIVEKIT_API_SECRET__|$$SECRET|g" \
+          /template/livekit.yaml > /rendered/livekit.yaml
+
+  livekit:
+    image: livekit/livekit-server:v1.9.1
+    command: --config /config/livekit.yaml
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50020:50000-50020/udp"
+    volumes:
+      - livekit_rendered:/config:ro
+    depends_on:
+      livekit-config:
+        condition: service_completed_successfully
+
+  teacher-agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      LIVEKIT_URL: ws://livekit:7880
+      CHOKIDAR_USEPOLLING: "true"
+      NODE_ENV: development
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+    depends_on:
+      livekit:
+        condition: service_started
+    command: npm run start:agent:dev
     init: true
     tty: true
 
@@ -118,3 +160,4 @@ volumes:
   postgres_data:
   minio_data:
   media_workspace:
+  livekit_rendered:
