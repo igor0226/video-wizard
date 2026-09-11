@@ -6,6 +6,10 @@ rtc:
   port_range_start: 50000
   port_range_end: 50020
   use_external_ip: false
+  # Browser on the host uses node_ip; Docker services (teacher-agent) use the
+  # container bridge IP via advertise_internal_ip.
+  node_ip: __LIVEKIT_NODE_IP__
+  advertise_internal_ip: true
 # API key/secret are filled from backend/.env when Compose renders this file.
 development: true
 keys:

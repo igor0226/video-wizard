@@ -1,3 +1,5 @@
+import type { LanguageLevel } from "@/shared/config";
+
 export type CallTopic = {
 	id: string;
 	title: string;
@@ -61,3 +63,48 @@ export type ConnectionStep =
 	| "ice_negotiation"
 	| "model_warmup"
 	| "ready";
+
+export type TeacherEmotion =
+	| "neutral"
+	| "smile"
+	| "laugh"
+	| "upset"
+	| "surprised"
+	| "angry"
+	| "thoughtful";
+
+export type EmotionSource = "reply" | "reaction";
+
+export type EmotionIntensity = 1 | 2 | 3;
+
+export type TeacherEmotionMessage = {
+	emotion: TeacherEmotion;
+	intensity?: EmotionIntensity;
+	source: EmotionSource;
+};
+
+export const TEACHER_EMOTIONS: readonly TeacherEmotion[] = [
+	"neutral",
+	"smile",
+	"laugh",
+	"upset",
+	"surprised",
+	"angry",
+	"thoughtful",
+];
+
+export const TEACHER_EMOTION_TOPIC = "teacher-emotion";
+
+export type CreateCallRequest = {
+	userId: string;
+	sourceLanguage: string;
+	languageLevel: LanguageLevel;
+	explanationLanguage?: string;
+};
+
+export type CreateCallResponse = {
+	callId: string;
+	roomName: string;
+	token: string;
+	livekitUrl: string;
+};

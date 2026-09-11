@@ -5,11 +5,13 @@ import { useEffect } from "react";
 export function useCallShortcuts(
 	setControls: React.Dispatch<React.SetStateAction<CallControlState>>,
 	onEnd: () => void,
+	onToggleMute?: () => void,
 ) {
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === "m" || event.key === "M") {
 				setControls((current) => ({ ...current, isMuted: !current.isMuted }));
+				onToggleMute?.();
 			}
 			if (event.key === "v" || event.key === "V") {
 				setControls((current) => ({
@@ -29,5 +31,5 @@ export function useCallShortcuts(
 		};
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [onEnd, setControls]);
+	}, [onEnd, onToggleMute, setControls]);
 }

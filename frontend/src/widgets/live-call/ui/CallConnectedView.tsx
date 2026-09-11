@@ -19,6 +19,7 @@ import { useSessionTimer } from "./useSessionTimer";
 type CallConnectedViewProps = {
 	topicTitle: string;
 	onEndCall: () => void;
+	onToggleMute?: () => void;
 };
 
 const INITIAL_CONTROLS: CallControlState = {
@@ -32,6 +33,7 @@ const INITIAL_CONTROLS: CallControlState = {
 export function CallConnectedView({
 	topicTitle,
 	onEndCall,
+	onToggleMute,
 }: CallConnectedViewProps) {
 	const [sessionSeconds, setSessionSeconds] = useState(258);
 	const [controls, setControls] = useState(INITIAL_CONTROLS);
@@ -41,7 +43,7 @@ export function CallConnectedView({
 	const [newPhrase, setNewPhrase] = useState("");
 
 	useSessionTimer(setSessionSeconds);
-	useCallShortcuts(setControls, () => setShowEndModal(true));
+	useCallShortcuts(setControls, () => setShowEndModal(true), onToggleMute);
 
 	return (
 		<div className="callConnected">
@@ -49,12 +51,15 @@ export function CallConnectedView({
 			<div className="callStageWrap">
 				<CallStage
 					controls={controls}
-					onToggle={(key) =>
+					onToggle={(key) => {
+						if (key === "isMuted") {
+							onToggleMute?.();
+						}
 						setControls((current) => ({
 							...current,
 							[key]: !current[key],
-						}))
-					}
+						}));
+					}}
 					onEndCall={() => setShowEndModal(true)}
 				/>
 				{controls.isPanelOpen ? (

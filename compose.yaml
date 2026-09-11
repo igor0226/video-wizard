@@ -96,11 +96,14 @@ services:
       - |
         KEY="$${LIVEKIT_API_KEY:-devkey}"
         SECRET="$${LIVEKIT_API_SECRET:-local_livekit_secret_do_not_use_prod}"
-        sed -e "s|__LIVEKIT_API_KEY__|$$KEY|g" -e "s|__LIVEKIT_API_SECRET__|$$SECRET|g" \
+        NODE_IP="$${LIVEKIT_NODE_IP:-127.0.0.1}"
+        sed -e "s|__LIVEKIT_API_KEY__|$$KEY|g" \
+            -e "s|__LIVEKIT_API_SECRET__|$$SECRET|g" \
+            -e "s|__LIVEKIT_NODE_IP__|$$NODE_IP|g" \
           /template/livekit.yaml > /rendered/livekit.yaml
 
   livekit:
-    image: livekit/livekit-server:v1.9.1
+    image: livekit/livekit-server:v1.13.6
     command: --config /config/livekit.yaml
     ports:
       - "7880:7880"

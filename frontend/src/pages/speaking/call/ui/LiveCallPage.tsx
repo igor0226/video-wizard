@@ -3,11 +3,11 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-import { SPEAKING_TOPICS } from "@/entities/speaking-session";
+import { parseCefrLevel, SPEAKING_TOPICS } from "@/entities/speaking-session";
 import {
 	CallConnectedView,
 	CallConnectingView,
-	useMockCallConnection,
+	useLiveCallConnection,
 } from "@/widgets/live-call";
 
 function LiveCallContent() {
@@ -17,13 +17,25 @@ function LiveCallContent() {
 	const topicId = searchParams?.get("topic") ?? SPEAKING_TOPICS[0].id;
 	const topic =
 		SPEAKING_TOPICS.find((item) => item.id === topicId) ?? SPEAKING_TOPICS[0];
-	const { step, phase, errorType, retry } = useMockCallConnection();
+	const { step, phase, errorType, retry, endCall, toggleMic } =
+		useLiveCallConnection({
+			sourceLanguage: "English",
+			explanationLanguage: "English",
+			languageLevel: parseCefrLevel(topic.level),
+		});
+
+	const leaveSpeaking = () => {
+		void endCall().finally(() => router.push("/speaking"));
+	};
 
 	if (phase === "connected") {
 		return (
 			<CallConnectedView
 				topicTitle={topic.title}
-				onEndCall={() => router.push("/speaking")}
+				onEndCall={leaveSpeaking}
+				onToggleMute={() => {
+					void toggleMic();
+				}}
 			/>
 		);
 	}
@@ -35,7 +47,7 @@ function LiveCallContent() {
 			phase={phase}
 			errorType={errorType}
 			onRetry={retry}
-			onCancel={() => router.push("/speaking")}
+			onCancel={leaveSpeaking}
 		/>
 	);
 }
