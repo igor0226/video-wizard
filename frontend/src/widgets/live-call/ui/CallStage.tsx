@@ -1,15 +1,21 @@
-import type { CallControlState } from "@/entities/speaking-session";
-
 import { TeacherAvatarSlot } from "@/entities/teacher";
 import { CallControlDock } from "./CallControlDock";
 
 type CallStageProps = {
-	controls: CallControlState;
-	onToggle: (key: "isMuted" | "isPanelOpen") => void;
+	isMuted: boolean;
+	isPanelOpen: boolean;
+	onToggleMute: () => void;
+	onTogglePanel: () => void;
 	onEndCall: () => void;
 };
 
-export function CallStage({ controls, onToggle, onEndCall }: CallStageProps) {
+export function CallStage({
+	isMuted,
+	isPanelOpen,
+	onToggleMute,
+	onTogglePanel,
+	onEndCall,
+}: CallStageProps) {
 	return (
 		<div className="callStage">
 			<div className="callStageCanvas">
@@ -20,9 +26,10 @@ export function CallStage({ controls, onToggle, onEndCall }: CallStageProps) {
 				/>
 			</div>
 			<CallControlDock
-				controls={controls}
-				onToggleMute={() => onToggle("isMuted")}
-				onTogglePanel={() => onToggle("isPanelOpen")}
+				isMuted={isMuted}
+				isPanelOpen={isPanelOpen}
+				onToggleMute={onToggleMute}
+				onTogglePanel={onTogglePanel}
 				onEndCall={onEndCall}
 			/>
 		</div>

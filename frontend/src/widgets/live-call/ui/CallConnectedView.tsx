@@ -7,7 +7,7 @@ import type {
 
 import { useState } from "react";
 
-import { SAVED_PHRASES, TRANSCRIPT_FIXTURE } from "@/entities/speaking-session";
+import { SAVED_PHRASES } from "@/entities/speaking-session";
 import { saveCallPhrase } from "@/features/save-call-phrase";
 import { CallStage } from "./CallStage";
 import { CallStatusBar } from "./CallStatusBar";
@@ -25,7 +25,6 @@ type CallConnectedViewProps = {
 const INITIAL_CONTROLS: CallControlState = {
 	isMuted: false,
 	isPanelOpen: true,
-	activePanelTab: "transcript",
 };
 
 export function CallConnectedView({
@@ -33,14 +32,13 @@ export function CallConnectedView({
 	onEndCall,
 	onToggleMute,
 }: CallConnectedViewProps) {
-	const [sessionSeconds, setSessionSeconds] = useState(258);
+	const sessionSeconds = useSessionTimer();
 	const [controls, setControls] = useState(INITIAL_CONTROLS);
 	const [showEndModal, setShowEndModal] = useState(false);
 	const [savedPhrases, setSavedPhrases] =
 		useState<SavedPhrase[]>(SAVED_PHRASES);
 	const [newPhrase, setNewPhrase] = useState("");
 
-	useSessionTimer(setSessionSeconds);
 	useCallShortcuts(setControls, () => setShowEndModal(true), onToggleMute);
 
 	return (
@@ -48,27 +46,27 @@ export function CallConnectedView({
 			<CallStatusBar topicTitle={topicTitle} sessionSeconds={sessionSeconds} />
 			<div className="callStageWrap">
 				<CallStage
-					controls={controls}
-					onToggle={(key) => {
-						if (key === "isMuted") {
-							onToggleMute?.();
-						}
+					isMuted={controls.isMuted}
+					isPanelOpen={controls.isPanelOpen}
+					onToggleMute={() => {
+						onToggleMute?.();
 						setControls((current) => ({
 							...current,
-							[key]: !current[key],
+							isMuted: !current.isMuted,
 						}));
 					}}
+					onTogglePanel={() =>
+						setControls((current) => ({
+							...current,
+							isPanelOpen: !current.isPanelOpen,
+						}))
+					}
 					onEndCall={() => setShowEndModal(true)}
 				/>
 				{controls.isPanelOpen ? (
 					<StudyDrawer
-						segments={TRANSCRIPT_FIXTURE}
 						phrases={savedPhrases}
 						newPhrase={newPhrase}
-						activeTab={controls.activePanelTab}
-						onTabChange={(tab) =>
-							setControls((current) => ({ ...current, activePanelTab: tab }))
-						}
 						onNewPhraseChange={setNewPhrase}
 						onSavePhrase={(term) => {
 							const next = saveCallPhrase(term, sessionSeconds, savedPhrases);

@@ -17,12 +17,11 @@ export const SPEAKING_TOPICS: CallTopic[] = [
 	},
 	{
 		id: "topic-2",
-		title: "Travel Situations: Airport & Hotel Check-in",
-		level: "A2-B1",
-		description:
-			"Navigate real-world travel hiccups, booking adjustments, and conversational courtesies.",
+		title: "A simple conversation about life, work, and hobbies",
+		level: "B1-B2",
+		description: "Have a simple conversation about life, work, and hobbies.",
 		suggestedDurationMins: 10,
-		tags: ["Everyday", "Travel"],
+		tags: ["Everyday", "Life"],
 	},
 	{
 		id: "topic-3",

@@ -1,19 +1,19 @@
-import type { CallControlState } from "@/entities/speaking-session";
-
 import { BookMarked, Mic, MicOff, PhoneOff } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 import { CallControlToggleButton } from "./CallControlToggleButton";
 
 type CallControlDockProps = {
-	controls: CallControlState;
+	isMuted: boolean;
+	isPanelOpen: boolean;
 	onToggleMute: () => void;
 	onTogglePanel: () => void;
 	onEndCall: () => void;
 };
 
 export function CallControlDock({
-	controls,
+	isMuted,
+	isPanelOpen,
 	onToggleMute,
 	onTogglePanel,
 	onEndCall,
@@ -22,15 +22,15 @@ export function CallControlDock({
 		<div className="callDock">
 			<div className="callDockInner">
 				<CallControlToggleButton
-					label={controls.isMuted ? "Unmute microphone" : "Mute microphone"}
-					pressed={controls.isMuted}
+					label={isMuted ? "Unmute microphone" : "Mute microphone"}
+					pressed={isMuted}
 					onClick={onToggleMute}
 				>
-					{controls.isMuted ? <MicOff /> : <Mic />}
+					{isMuted ? <MicOff /> : <Mic />}
 				</CallControlToggleButton>
 				<CallControlToggleButton
-					label="Toggle learning drawer"
-					pressed={controls.isPanelOpen}
+					label="Toggle saved phrases"
+					pressed={isPanelOpen}
 					onClick={onTogglePanel}
 				>
 					<BookMarked />
