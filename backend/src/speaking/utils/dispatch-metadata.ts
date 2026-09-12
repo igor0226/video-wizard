@@ -1,10 +1,15 @@
 import type { TeacherCallRecord } from "../../storage/types";
 
-export function serializeCallDispatchMetadata(call: TeacherCallRecord): string {
+export function serializeCallDispatchMetadata(input: {
+	call: TeacherCallRecord;
+	topic?: string;
+}): string {
+	const topic = input.topic?.trim();
 	return JSON.stringify({
-		callId: call.id,
-		sourceLanguage: call.sourceLanguage,
-		languageLevel: call.languageLevel,
-		explanationLanguage: call.explanationLanguage,
+		callId: input.call.id,
+		sourceLanguage: input.call.sourceLanguage,
+		languageLevel: input.call.languageLevel,
+		explanationLanguage: input.call.explanationLanguage,
+		...(topic ? { topic } : {}),
 	});
 }

@@ -3,7 +3,11 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-import { parseCefrLevel, SPEAKING_TOPICS } from "@/entities/speaking-session";
+import {
+	formatSpeakingTopicText,
+	parseCefrLevel,
+	SPEAKING_TOPICS,
+} from "@/entities/speaking-session";
 import {
 	CallConnectedView,
 	CallConnectingView,
@@ -22,6 +26,7 @@ function LiveCallContent() {
 			sourceLanguage: "English",
 			explanationLanguage: "English",
 			languageLevel: parseCefrLevel(topic.level),
+			topic: formatSpeakingTopicText(topic),
 		});
 
 	const leaveSpeaking = () => {

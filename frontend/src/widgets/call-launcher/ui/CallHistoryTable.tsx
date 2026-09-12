@@ -1,7 +1,8 @@
-import type { SpeakingCall } from "@/entities/speaking-session";
-
+import {
+	formatSpeakingCallStatus,
+	type SpeakingCall,
+} from "@/entities/speaking-session";
 import { Badge } from "@/shared/ui/badge";
-import { Button } from "@/shared/ui/button";
 import {
 	Table,
 	TableBody,
@@ -13,48 +14,47 @@ import {
 
 type CallHistoryTableProps = {
 	calls: SpeakingCall[];
-	onPracticeAgain: (topicId: string) => void;
 };
 
-export function CallHistoryTable({
-	calls,
-	onPracticeAgain,
-}: CallHistoryTableProps) {
+export function CallHistoryTable({ calls }: CallHistoryTableProps) {
 	return (
 		<div className="overflow-hidden rounded-lg border border-border">
 			<Table>
 				<TableHeader>
 					<TableRow>
-						<TableHead>Session ID</TableHead>
-						<TableHead>Topic</TableHead>
+						<TableHead className="pl-4 text-left">Status</TableHead>
+						<TableHead>Level</TableHead>
+						<TableHead>Source</TableHead>
+						<TableHead>Explanation</TableHead>
 						<TableHead>Date</TableHead>
 						<TableHead>Duration</TableHead>
-						<TableHead>Fluency</TableHead>
-						<TableHead className="text-right">Action</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
 					{calls.map((call) => (
 						<TableRow key={call.id}>
-							<TableCell className="font-mono">{call.callId}</TableCell>
-							<TableCell>{call.topicTitle}</TableCell>
+							<TableCell className="text-left">
+								<Badge
+									variant={
+										call.status === "failed" ? "destructive" : "secondary"
+									}
+								>
+									{formatSpeakingCallStatus(call.status)}
+								</Badge>
+							</TableCell>
+							<TableCell>
+								<span className="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+									{call.languageLevel}
+								</span>
+							</TableCell>
+							<TableCell>{call.sourceLanguage}</TableCell>
+							<TableCell className="text-muted-foreground">
+								{call.explanationLanguage ?? "—"}
+							</TableCell>
 							<TableCell className="text-muted-foreground">
 								{call.date}
 							</TableCell>
 							<TableCell className="font-mono">{call.duration}</TableCell>
-							<TableCell>
-								<Badge variant="secondary">{call.fluencyScore}%</Badge>
-							</TableCell>
-							<TableCell className="text-right">
-								<Button
-									type="button"
-									variant="link"
-									size="sm"
-									onClick={() => onPracticeAgain(call.topicId)}
-								>
-									Practice Again
-								</Button>
-							</TableCell>
 						</TableRow>
 					))}
 				</TableBody>

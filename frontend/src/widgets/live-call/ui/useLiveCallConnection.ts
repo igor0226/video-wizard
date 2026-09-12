@@ -57,6 +57,7 @@ export function useLiveCallConnection(
 		request.sourceLanguage,
 		request.explanationLanguage,
 		request.languageLevel,
+		request.topic,
 	]);
 
 	const retry = useCallback(() => {

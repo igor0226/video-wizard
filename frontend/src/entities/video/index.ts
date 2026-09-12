@@ -13,6 +13,8 @@ export type {
 } from "./model/types";
 
 export { usePlaybackPhrases } from "./api/usePlaybackPhrases";
+export { useVideoStatus } from "./api/useVideoStatus";
+export { useVideos } from "./api/useVideos";
 export {
 	fetchVideoStatus,
 	fetchVideos,

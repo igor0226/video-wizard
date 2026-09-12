@@ -169,7 +169,8 @@ These are stored on the video record (Postgres) and passed into the phrase-detec
 
 Self-hosted LiveKit (`livekit` in Compose) plus a Node agent worker (`teacher-agent` in Compose, `npm run start:agent:dev`).
 
-- `POST /api/speaking/calls` — stub auth via `userId`; creates a `teacher_calls` row, LiveKit room, agent dispatch, and participant token. Returns `{ callId, roomName, token, livekitUrl }`.
+- `POST /api/speaking/calls` — stub auth via `userId`; creates a `teacher_calls` row, LiveKit room, agent dispatch, and participant token. Optional `topic` string is forwarded only in agent dispatch metadata (not stored). Returns `{ callId, roomName, token, livekitUrl }`.
+- `GET /api/speaking/calls?userId=` — owner-scoped history (`id`, status, languages, timestamps, `durationSeconds`). Omits topic, fluency, and LiveKit internals.
 - `GET /api/speaking/calls/:id?userId=` — owner-scoped call status.
 - `POST /api/speaking/calls/:id/end` — owner-scoped end; deletes the LiveKit room and marks the call `ended`.
 - `POST /api/speaking/livekit/webhook` — LiveKit `room_finished` / `participant_left` reconciliation.

@@ -10,7 +10,6 @@ export type CallTopic = {
 };
 
 export type SpeakingCallStatus =
-	| "scheduled"
 	| "connecting"
 	| "in_progress"
 	| "completed"
@@ -20,15 +19,24 @@ export type SpeakingCallStatus =
 export type SpeakingCall = {
 	id: string;
 	callId: string;
-	topicId: string;
-	topicTitle: string;
 	date: string;
 	duration: string;
 	durationSeconds: number;
 	status: SpeakingCallStatus;
-	fluencyScore?: number;
-	vocabularyCount?: number;
-	pronunciationAccuracy?: number;
+	languageLevel: LanguageLevel;
+	sourceLanguage: string;
+	explanationLanguage: string | null;
+};
+
+export type CallHistoryItem = {
+	id: string;
+	status: "active" | "ended" | "failed";
+	sourceLanguage: string;
+	languageLevel: LanguageLevel;
+	explanationLanguage: string | null;
+	createdAt: string;
+	endedAt: string | null;
+	durationSeconds: number | null;
 };
 
 export type TranscriptSegment = {
@@ -100,6 +108,7 @@ export type CreateCallRequest = {
 	sourceLanguage: string;
 	languageLevel: LanguageLevel;
 	explanationLanguage?: string;
+	topic?: string;
 };
 
 export type CreateCallResponse = {
