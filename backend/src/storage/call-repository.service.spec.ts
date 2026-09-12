@@ -1,3 +1,4 @@
+import { LessThan } from "typeorm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CallRepositoryService } from "./call-repository.service";
@@ -49,5 +50,36 @@ describe("CallRepositoryService", () => {
 		expect(ended.status).toBe("ended");
 		expect(ended.endedReason).toBe("user_ended");
 		expect(ended.endedAt).toBeTruthy();
+	});
+
+	it("listActiveCallsCreatedBefore queries old active calls", async () => {
+		const createdBefore = "2026-01-01T00:02:00.000Z";
+		const stale: TeacherCallRecord = {
+			id: "stale-1",
+			userId: "user-1",
+			roomName: "teacher-stale-1",
+			status: "active",
+			sourceLanguage: "English",
+			languageLevel: "A2",
+			explanationLanguage: null,
+			agentDispatchId: null,
+			endedReason: null,
+			createdAt: "2026-01-01T00:00:00.000Z",
+			endedAt: null,
+		};
+		repo.find.mockResolvedValueOnce([stale]);
+
+		const records = await service.listActiveCallsCreatedBefore({
+			createdBefore,
+		});
+
+		expect(records).toEqual([stale]);
+		expect(repo.find).toHaveBeenCalledWith({
+			where: {
+				status: "active",
+				createdAt: LessThan(createdBefore),
+			},
+			order: { createdAt: "ASC" },
+		});
 	});
 });

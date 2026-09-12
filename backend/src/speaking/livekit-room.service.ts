@@ -28,6 +28,19 @@ export class LivekitRoomService {
 		}
 	}
 
+	async roomExists(roomName: string): Promise<boolean> {
+		const client = await this.getClient();
+		try {
+			const rooms = await client.listRooms([roomName]);
+			return rooms.some((room) => room.name === roomName);
+		} catch (error) {
+			if (isNotFoundError(error)) {
+				return false;
+			}
+			throw error;
+		}
+	}
+
 	async removeParticipant(input: {
 		roomName: string;
 		identity: string;

@@ -6,6 +6,8 @@ import { LivekitTokenService } from "./livekit-token.service";
 import { LivekitWebhookService } from "./livekit-webhook.service";
 import { SpeakingController } from "./speaking.controller";
 import { SpeakingService } from "./speaking.service";
+import { StaleCallCleanupService } from "./stale-call-cleanup.service";
+import { StaleCallWorkerService } from "./stale-call-worker.service";
 
 @Module({
 	controllers: [SpeakingController],
@@ -15,6 +17,8 @@ import { SpeakingService } from "./speaking.service";
 		LivekitRoomService,
 		AgentDispatchService,
 		LivekitWebhookService,
+		StaleCallCleanupService,
+		StaleCallWorkerService,
 	],
 })
 export class SpeakingModule {}

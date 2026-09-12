@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { LessThan, Repository } from "typeorm";
 
 import { TeacherCall } from "../models";
 import type { CreateTeacherCallInput, TeacherCallRecord } from "./types";
@@ -59,6 +59,19 @@ export class CallRepositoryService {
 		const records = await this.callRepository.find({
 			where: { userId },
 			order: { createdAt: "DESC" },
+		});
+		return records.map(normalizeTeacherCallRecord);
+	}
+
+	async listActiveCallsCreatedBefore(input: {
+		createdBefore: string;
+	}): Promise<TeacherCallRecord[]> {
+		const records = await this.callRepository.find({
+			where: {
+				status: "active",
+				createdAt: LessThan(input.createdBefore),
+			},
+			order: { createdAt: "ASC" },
 		});
 		return records.map(normalizeTeacherCallRecord);
 	}
