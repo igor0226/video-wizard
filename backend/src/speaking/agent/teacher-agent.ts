@@ -37,6 +37,7 @@ export default defineAgent({
 	entry: async (ctx: JobContext) => {
 		const metadata = parseTeacherJobMetadata(ctx.job.metadata);
 		const instructions = buildTeacherInstructions(metadata);
+		await ctx.connect();
 		const publisher = requireEmotionPublisher(ctx.room.localParticipant);
 		const reactions = new ReactionController(publisher);
 
@@ -83,7 +84,6 @@ export default defineAgent({
 		});
 
 		await session.start({ agent, room: ctx.room });
-		await ctx.connect();
 		await session.generateReply({
 			instructions: buildGreetingInstructions(metadata),
 		});

@@ -38,6 +38,7 @@ describe("SpeakingService", () => {
 		markFailed: vi.fn(async () => ({ ...call, status: "failed" as const })),
 		markEnded: vi.fn(async () => ({ ...call, status: "ended" as const })),
 		getCall: vi.fn(async (): Promise<TeacherCallRecord | null> => call),
+		listCallsForUser: vi.fn(async () => [call]),
 	};
 	const tokens = {
 		createParticipantToken: vi.fn(async () => "jwt-token"),
@@ -68,6 +69,7 @@ describe("SpeakingService", () => {
 			sourceLanguage: "English",
 			languageLevel: "B1",
 			explanationLanguage: "Spanish",
+			topic: "Airport check-in",
 		});
 
 		expect(rooms.createRoom).toHaveBeenCalledWith({
@@ -78,8 +80,15 @@ describe("SpeakingService", () => {
 			expect.objectContaining({
 				roomName: call.roomName,
 				agentName: "teacher-agent",
+				metadata: expect.stringContaining("Airport check-in"),
 			}),
 		);
+		expect(calls.createCall).toHaveBeenCalledWith({
+			userId: "user-1",
+			sourceLanguage: "English",
+			languageLevel: "B1",
+			explanationLanguage: "Spanish",
+		});
 		expect(result).toEqual({
 			callId: call.id,
 			roomName: call.roomName,
@@ -118,6 +127,19 @@ describe("SpeakingService", () => {
 			reason: "user_ended",
 		});
 		expect(result.status).toBe("ended");
+	});
+
+	it("listCallsForUser maps owned records to history items", async () => {
+		const items = await service.listCallsForUser("user-1");
+		expect(calls.listCallsForUser).toHaveBeenCalledWith("user-1");
+		expect(items).toEqual([
+			expect.objectContaining({
+				id: call.id,
+				status: "active",
+				durationSeconds: null,
+			}),
+		]);
+		expect(items[0]).not.toHaveProperty("topic");
 	});
 
 	it("endCall rejects a non-owner", async () => {

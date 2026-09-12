@@ -2,10 +2,9 @@
 
 import type { RefObject } from "react";
 
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchVideos } from "@/entities/video";
+import { useVideos } from "@/entities/video";
 import {
 	DEFAULT_STATUS_FILTERS,
 	matchesVideoQuery,
@@ -28,13 +27,7 @@ export default function ListeningLibraryPage() {
 	const [pageIndex, setPageIndex] = useState(0);
 	const [pageSize, setPageSize] = useState(10);
 
-	const videosQuery = useQuery({
-		queryKey: ["videos"],
-		queryFn: fetchVideos,
-		refetchInterval: 5000,
-	});
-
-	const videos = videosQuery.data?.videos ?? [];
+	const { videos, error: videosError } = useVideos();
 	const filteredVideos = useMemo(
 		() =>
 			videos.filter(
@@ -110,10 +103,8 @@ export default function ListeningLibraryPage() {
 					}}
 				/>
 
-				{videosQuery.error ? (
-					<p className="tasksPageError">
-						{(videosQuery.error as Error).message}
-					</p>
+				{videosError ? (
+					<p className="tasksPageError">{(videosError as Error).message}</p>
 				) : null}
 			</section>
 		</main>

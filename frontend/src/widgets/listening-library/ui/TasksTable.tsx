@@ -2,12 +2,7 @@
 
 import type { VideoItem } from "@/entities/video";
 
-import {
-	ArrowDown,
-	ArrowUp,
-	ChevronsUpDown,
-	MoreHorizontal,
-} from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -32,6 +27,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/shared/ui/table";
+import { TasksSortHeader } from "./TasksSortHeader";
 import "./TasksTable.css";
 
 type TasksTableProps = {
@@ -42,25 +38,6 @@ type TasksTableProps = {
 	onFocusedIdChange: (id: string | null) => void;
 	emptyLabel?: string;
 };
-
-function SortHeader({ label }: { label: string }) {
-	return (
-		<div className="tasksSortHeader">
-			<span>{label}</span>
-			<div className="tasksSortIcons">
-				<Button type="button" variant="ghost" size="icon" className="h-6 w-6">
-					<ArrowUp className="h-3 w-3" />
-				</Button>
-				<Button type="button" variant="ghost" size="icon" className="h-6 w-6">
-					<ArrowDown className="h-3 w-3" />
-				</Button>
-				<Button type="button" variant="ghost" size="icon" className="h-6 w-6">
-					<ChevronsUpDown className="h-3 w-3" />
-				</Button>
-			</div>
-		</div>
-	);
-}
 
 export function TasksTable({
 	videos,
@@ -109,10 +86,10 @@ export function TasksTable({
 						<TableHead>Task</TableHead>
 						<TableHead>Created at</TableHead>
 						<TableHead>
-							<SortHeader label="Title" />
+							<TasksSortHeader label="Title" />
 						</TableHead>
 						<TableHead>
-							<SortHeader label="Status" />
+							<TasksSortHeader label="Status" />
 						</TableHead>
 						<TableHead className="w-10" />
 					</TableRow>

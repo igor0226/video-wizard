@@ -49,6 +49,60 @@ describe("Speaking calls (e2e)", () => {
 		expect(response.status).toBe(400);
 	});
 
+	it("GET /api/speaking/calls returns 400 without userId", async () => {
+		const response = await request(app.getHttpServer()).get(
+			"/api/speaking/calls",
+		);
+		expect(response.status).toBe(400);
+	});
+
+	it("lists history without topic or fluency and newest first", async () => {
+		const first = await request(app.getHttpServer())
+			.post("/api/speaking/calls")
+			.send({
+				userId: "history-user",
+				sourceLanguage: "English",
+				languageLevel: "A2",
+				topic: "Airport check-in. Practice booking changes.",
+			});
+		const second = await request(app.getHttpServer())
+			.post("/api/speaking/calls")
+			.send({
+				userId: "history-user",
+				sourceLanguage: "English",
+				languageLevel: "B1",
+			});
+		expect(first.status).toBe(201);
+		expect(second.status).toBe(201);
+
+		const listed = await request(app.getHttpServer()).get(
+			"/api/speaking/calls?userId=history-user",
+		);
+		expect(listed.status).toBe(200);
+		expect(listed.body).toHaveLength(2);
+		expect(listed.body[0].id).toBe(second.body.callId);
+		expect(listed.body[1].id).toBe(first.body.callId);
+		expect(listed.body[0]).toMatchObject({
+			status: "active",
+			languageLevel: "B1",
+			durationSeconds: null,
+		});
+		expect(listed.body[0]).not.toHaveProperty("topic");
+		expect(listed.body[0]).not.toHaveProperty("fluencyScore");
+		expect(listed.body[0]).not.toHaveProperty("roomName");
+
+		const empty = await request(app.getHttpServer()).get(
+			"/api/speaking/calls?userId=other-history-user",
+		);
+		expect(empty.status).toBe(200);
+		expect(empty.body).toEqual([]);
+
+		const fetched = await request(app.getHttpServer()).get(
+			`/api/speaking/calls/${first.body.callId}?userId=history-user`,
+		);
+		expect(fetched.body).not.toHaveProperty("topic");
+	});
+
 	it("creates, fetches, and ends a teacher call", async () => {
 		const created = await request(app.getHttpServer())
 			.post("/api/speaking/calls")

@@ -7,6 +7,7 @@ import {
 import { TeacherAvatarSlot } from "@/entities/teacher";
 import { Button } from "@/shared/ui/button";
 import { CallConnectionError } from "./CallConnectionError";
+import { ConnectingSteps } from "./ConnectingSteps";
 
 type CallConnectingViewProps = {
 	topicTitle: string;
@@ -68,30 +69,6 @@ export function CallConnectingView({
 			<p className="text-center font-mono text-[11px] text-muted-foreground">
 				Audio encryption active · Zero cloud audio retention
 			</p>
-		</div>
-	);
-}
-
-function ConnectingSteps({ currentStep }: { currentStep: ConnectionStep }) {
-	return (
-		<div className="space-y-3 rounded-xl border border-border bg-card p-4 text-left text-xs">
-			{CONNECTION_STEPS.map((item) => {
-				const isCurrent = item.id === currentStep;
-				return (
-					<div key={item.id} className="flex items-center justify-between">
-						<span
-							className={
-								isCurrent ? "text-foreground" : "text-muted-foreground"
-							}
-						>
-							{item.label}
-						</span>
-						<span className="font-mono text-[11px] text-muted-foreground">
-							{isCurrent ? "In progress" : ""}
-						</span>
-					</div>
-				);
-			})}
 		</div>
 	);
 }

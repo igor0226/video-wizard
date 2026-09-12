@@ -2,15 +2,10 @@
 
 import type { VideoStatusResponse, VideosResponse } from "@/entities/video";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
-import {
-	fetchVideoStatus,
-	fetchVideos,
-	isTerminalVideoStatus,
-} from "@/entities/video";
+import { useVideoStatus, useVideos } from "@/entities/video";
 import { useRetryVideo } from "@/features/retry-video";
 import "@/widgets/listening-library";
 import { AppPageHeader } from "@/widgets/page-header";
@@ -20,65 +15,23 @@ import { PlayerPanel } from "@/widgets/video-player";
 export default function ListeningDetailPage() {
 	const params = useParams<{ id: string }>();
 	const videoId = params?.id ?? "";
-	const queryClient = useQueryClient();
 	const { retryVideo, isRetrying } = useRetryVideo(videoId);
+	const { videos, error: videosError } = useVideos();
+	const {
+		status: statusData,
+		isLoading: isStatusLoading,
+		error: statusError,
+	} = useVideoStatus(videoId);
 
-	const videosQuery = useQuery({
-		queryKey: ["videos"],
-		queryFn: fetchVideos,
-		refetchInterval: 5000,
-	});
-
-	const videos = videosQuery.data?.videos ?? [];
 	const selectedVideo = useMemo(
 		() => videos.find((video) => video.id === videoId) ?? null,
 		[videoId, videos],
 	);
 
-	const statusQuery = useQuery({
-		queryKey: ["video-status", videoId],
-		queryFn: () => fetchVideoStatus(videoId),
-		enabled: Boolean(videoId),
-		refetchInterval: (query) =>
-			isTerminalVideoStatus(query.state.data?.status) ? false : 3000,
-	});
-
-	useEffect(() => {
-		const status = statusQuery.data;
-		if (!status || !videoId) {
-			return;
-		}
-
-		queryClient.setQueryData<VideosResponse>(["videos"], (previous) => {
-			if (!previous) {
-				return previous;
-			}
-			return {
-				videos: previous.videos.map((video) =>
-					video.id === videoId
-						? {
-								...video,
-								status: status.status,
-								playable: status.playable,
-								chunkCount: status.chunkCount,
-								failureReason: status.failureReason,
-								processingStep: status.processingStep,
-								queuePosition: status.queuePosition,
-								sourceLanguage: status.sourceLanguage,
-								explanationLanguage: status.explanationLanguage,
-								languageLevel: status.languageLevel,
-							}
-						: video,
-				),
-			};
-		});
-	}, [queryClient, videoId, statusQuery.data]);
-
 	const pageError =
-		(videosQuery.error as Error | null)?.message ??
-		(statusQuery.error as Error | null)?.message ??
+		(videosError as Error | null)?.message ??
+		(statusError as Error | null)?.message ??
 		null;
-	const statusData = statusQuery.data;
 	const languageSummary = buildLanguageSummary(statusData, selectedVideo);
 
 	return (
@@ -110,7 +63,7 @@ export default function ListeningDetailPage() {
 					failureReason={
 						statusData?.failureReason ?? selectedVideo?.failureReason ?? null
 					}
-					isLoading={statusQuery.isLoading}
+					isLoading={isStatusLoading}
 					canRetry={statusData?.status === "failed"}
 					onRetry={() => retryVideo()}
 					isRetrying={isRetrying}

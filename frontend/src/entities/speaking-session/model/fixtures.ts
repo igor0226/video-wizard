@@ -2,7 +2,6 @@ import type {
 	CallTopic,
 	ConnectionStep,
 	SavedPhrase,
-	SpeakingCall,
 	TranscriptSegment,
 } from "./types";
 
@@ -33,48 +32,6 @@ export const SPEAKING_TOPICS: CallTopic[] = [
 			"Formulate coherent argumentative theses and defend viewpoints with sophisticated transitions.",
 		suggestedDurationMins: 20,
 		tags: ["Academic", "Debate"],
-	},
-];
-
-export const CALL_HISTORY: SpeakingCall[] = [
-	{
-		id: "call-1",
-		callId: "CALL-9021",
-		topicId: "topic-1",
-		topicTitle: "Job Interview: Technical & Product Communication",
-		date: "21 August 2026",
-		duration: "14:20",
-		durationSeconds: 860,
-		status: "completed",
-		fluencyScore: 88,
-		vocabularyCount: 14,
-		pronunciationAccuracy: 92,
-	},
-	{
-		id: "call-2",
-		callId: "CALL-8840",
-		topicId: "topic-2",
-		topicTitle: "Travel Situations: Airport & Hotel Check-in",
-		date: "18 August 2026",
-		duration: "09:45",
-		durationSeconds: 585,
-		status: "completed",
-		fluencyScore: 92,
-		vocabularyCount: 9,
-		pronunciationAccuracy: 95,
-	},
-	{
-		id: "call-3",
-		callId: "CALL-7102",
-		topicId: "topic-2",
-		topicTitle: "Daily Routine & Hobbies Discussion",
-		date: "14 August 2026",
-		duration: "12:10",
-		durationSeconds: 730,
-		status: "completed",
-		fluencyScore: 85,
-		vocabularyCount: 11,
-		pronunciationAccuracy: 89,
 	},
 ];
 

@@ -1,13 +1,5 @@
-import Link from "next/link";
-
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/shared/ui/breadcrumb";
+import { Breadcrumb, BreadcrumbList } from "@/shared/ui/breadcrumb";
+import { AppPageHeaderBreadcrumbItem } from "./AppPageHeaderBreadcrumbItem";
 import "./AppPageHeader.css";
 
 export type AppPageBreadcrumb = {
@@ -36,7 +28,13 @@ export function AppPageHeader({
 						{breadcrumbs.map((crumb, index) => {
 							const isLast = index === breadcrumbs.length - 1;
 							const key = `${crumb.label}-${index}`;
-							return <FragmentItem key={key} crumb={crumb} isLast={isLast} />;
+							return (
+								<AppPageHeaderBreadcrumbItem
+									key={key}
+									crumb={crumb}
+									isLast={isLast}
+								/>
+							);
 						})}
 					</BreadcrumbList>
 				</Breadcrumb>
@@ -49,28 +47,5 @@ export function AppPageHeader({
 				{actions}
 			</div>
 		</header>
-	);
-}
-
-function FragmentItem({
-	crumb,
-	isLast,
-}: {
-	crumb: AppPageBreadcrumb;
-	isLast: boolean;
-}) {
-	return (
-		<>
-			<BreadcrumbItem>
-				{isLast || !crumb.href ? (
-					<BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-				) : (
-					<BreadcrumbLink asChild>
-						<Link href={crumb.href}>{crumb.label}</Link>
-					</BreadcrumbLink>
-				)}
-			</BreadcrumbItem>
-			{!isLast ? <BreadcrumbSeparator /> : null}
-		</>
 	);
 }

@@ -11,6 +11,11 @@ import { LivekitRoomService } from "./livekit-room.service";
 import { LivekitTokenService } from "./livekit-token.service";
 import { serializeCallDispatchMetadata } from "./utils/dispatch-metadata";
 import { resolveLivekitConfig } from "./utils/resolve-livekit-config";
+import { toCallHistoryItem } from "./utils/to-call-history-item";
+
+export type CreateCallInput = CreateTeacherCallInput & {
+	topic?: string;
+};
 
 export type CreateCallResult = {
 	callId: string;
@@ -38,9 +43,10 @@ export class SpeakingService {
 		private readonly dispatch: AgentDispatchService,
 	) {}
 
-	async createCall(input: CreateTeacherCallInput): Promise<CreateCallResult> {
+	async createCall(input: CreateCallInput): Promise<CreateCallResult> {
+		const { topic, ...createInput } = input;
 		const config = resolveLivekitConfig();
-		const call = await this.calls.createCall(input);
+		const call = await this.calls.createCall(createInput);
 		try {
 			await this.rooms.createRoom({
 				name: call.roomName,
@@ -49,7 +55,7 @@ export class SpeakingService {
 			const dispatch = await this.dispatch.createDispatch({
 				roomName: call.roomName,
 				agentName: config.agentName,
-				metadata: serializeCallDispatchMetadata(call),
+				metadata: serializeCallDispatchMetadata({ call, topic }),
 			});
 			await this.calls.setAgentDispatchId({
 				callId: call.id,
@@ -77,6 +83,11 @@ export class SpeakingService {
 
 	async getCall(input: GetCallInput) {
 		return this.requireOwnedCall(input);
+	}
+
+	async listCallsForUser(userId: string) {
+		const records = await this.calls.listCallsForUser(userId);
+		return records.map(toCallHistoryItem);
 	}
 
 	async endCall(input: EndCallInput) {

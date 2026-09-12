@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { CALL_HISTORY, SPEAKING_TOPICS } from "@/entities/speaking-session";
+import { SPEAKING_TOPICS, useSpeakingCalls } from "@/entities/speaking-session";
 import { useStartCall } from "@/features/start-call";
 import { CallHistoryList, StartCallCard } from "@/widgets/call-launcher";
 import { AppPageHeader } from "@/widgets/page-header";
@@ -10,6 +10,7 @@ import { AppPageHeader } from "@/widgets/page-header";
 export default function SpeakingLauncherPage() {
 	const startCall = useStartCall();
 	const [selectedTopicId, setSelectedTopicId] = useState(SPEAKING_TOPICS[0].id);
+	const { calls, isLoading, errorMessage } = useSpeakingCalls();
 
 	return (
 		<main className="speakingPage">
@@ -27,8 +28,9 @@ export default function SpeakingLauncherPage() {
 				onStartCall={() => startCall(selectedTopicId)}
 			/>
 			<CallHistoryList
-				calls={CALL_HISTORY}
-				onPracticeAgain={(topicId) => startCall(topicId)}
+				calls={calls}
+				isLoading={isLoading}
+				errorMessage={errorMessage}
 			/>
 		</main>
 	);

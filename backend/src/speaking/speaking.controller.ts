@@ -23,6 +23,7 @@ type CreateCallBody = {
 	sourceLanguage?: unknown;
 	languageLevel?: unknown;
 	explanationLanguage?: unknown;
+	topic?: unknown;
 };
 
 @Controller("speaking")
@@ -56,7 +57,15 @@ export class SpeakingController {
 			sourceLanguage,
 			languageLevel,
 			explanationLanguage,
+			topic: parseOptionalTopic(body.topic),
 		});
+	}
+
+	@Get("calls")
+	async listCalls(@Query("userId") userId: string | undefined) {
+		return this.speakingService.listCallsForUser(
+			requireNonEmptyString(userId, "userId is required"),
+		);
 	}
 
 	@Get("calls/:id")
@@ -97,6 +106,16 @@ export class SpeakingController {
 function requireNonEmptyString(value: unknown, message: string): string {
 	if (typeof value !== "string" || !value.trim()) {
 		throw new BadRequestException(message);
+	}
+	return value.trim();
+}
+
+function parseOptionalTopic(value: unknown): string | undefined {
+	if (value === undefined || value === null) {
+		return undefined;
+	}
+	if (typeof value !== "string" || !value.trim()) {
+		throw new BadRequestException("topic must be a non-empty string");
 	}
 	return value.trim();
 }
