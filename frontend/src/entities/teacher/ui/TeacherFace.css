@@ -1,0 +1,7 @@
+.teacherFace {
+	@apply h-full w-full;
+}
+
+.teacherFace svg {
+	@apply block h-full w-full;
+}

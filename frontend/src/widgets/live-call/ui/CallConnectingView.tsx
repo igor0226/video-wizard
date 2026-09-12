@@ -39,12 +39,7 @@ export function CallConnectingView({
 			</div>
 			<div className="mx-auto w-full max-w-md space-y-8 text-center">
 				<div className="flex flex-col items-center">
-					<TeacherAvatarSlot
-						size="lg"
-						status="connecting"
-						fallbackLabel="Elena · AI Instructor"
-						className="mb-4"
-					/>
+					<TeacherAvatarSlot size="lg" status="connecting" className="mb-4" />
 					<h2 className="text-xl font-bold">Connecting to AI Instructor</h2>
 					<p
 						className="mt-1 text-xs text-muted-foreground"
