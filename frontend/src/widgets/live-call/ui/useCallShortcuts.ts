@@ -13,18 +13,6 @@ export function useCallShortcuts(
 				setControls((current) => ({ ...current, isMuted: !current.isMuted }));
 				onToggleMute?.();
 			}
-			if (event.key === "v" || event.key === "V") {
-				setControls((current) => ({
-					...current,
-					isVideoOff: !current.isVideoOff,
-				}));
-			}
-			if (event.key === "c" || event.key === "C") {
-				setControls((current) => ({
-					...current,
-					isCaptionsOn: !current.isCaptionsOn,
-				}));
-			}
 			if (event.key === "Escape") {
 				onEnd();
 			}

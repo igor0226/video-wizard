@@ -101,6 +101,3 @@ export const SAVED_PHRASES: SavedPhrase[] = [
 		savedAt: "14:26",
 	},
 ];
-
-export const LIVE_CAPTION =
-	"Could you walk me through a challenging technical tradeoff you managed recently?";

@@ -24,8 +24,6 @@ type CallConnectedViewProps = {
 
 const INITIAL_CONTROLS: CallControlState = {
 	isMuted: false,
-	isVideoOff: false,
-	isCaptionsOn: true,
 	isPanelOpen: true,
 	activePanelTab: "transcript",
 };

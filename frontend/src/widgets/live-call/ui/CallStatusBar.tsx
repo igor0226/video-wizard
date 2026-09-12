@@ -1,5 +1,4 @@
 import { formatTime } from "@/shared/lib";
-import { Badge } from "@/shared/ui/badge";
 
 type CallStatusBarProps = {
 	topicTitle: string;
@@ -22,7 +21,6 @@ export function CallStatusBar({
 				<span className="text-sm text-muted-foreground">{topicTitle}</span>
 			</div>
 			<div className="flex items-center gap-3">
-				<Badge variant="outline">HD · 24ms</Badge>
 				<div className="rounded-md border border-border bg-card px-3 py-1 font-mono text-xs">
 					{formatTime(sessionSeconds)}
 				</div>
