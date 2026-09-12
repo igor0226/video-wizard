@@ -16,7 +16,10 @@ export async function startMinioForTests(): Promise<void> {
 		return;
 	}
 
-	container = await new GenericContainer("minio/minio:latest")
+	// Docker Hub minio/minio is no longer publicly pullable; use the last official Quay image.
+	container = await new GenericContainer(
+		"quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z",
+	)
 		.withExposedPorts(9000)
 		.withEnvironment({
 			MINIO_ROOT_USER: MINIO_USER,
