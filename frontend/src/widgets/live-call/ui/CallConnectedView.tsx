@@ -2,12 +2,15 @@
 
 import type {
 	CallControlState,
+	EmotionIntensity,
 	SavedPhrase,
+	TeacherEmotion,
 } from "@/entities/speaking-session";
 
 import { useState } from "react";
 
 import { SAVED_PHRASES } from "@/entities/speaking-session";
+import { DEFAULT_TEACHER_FACE_INTENSITY } from "@/entities/teacher";
 import { saveCallPhrase } from "@/features/save-call-phrase";
 import { CallStage } from "./CallStage";
 import { CallStatusBar } from "./CallStatusBar";
@@ -15,9 +18,13 @@ import { EndCallDialog } from "./EndCallDialog";
 import { StudyDrawer } from "./StudyDrawer";
 import { useCallShortcuts } from "./useCallShortcuts";
 import { useSessionTimer } from "./useSessionTimer";
+import { useTeacherSpeechLevel } from "./useTeacherSpeechLevel";
 
 type CallConnectedViewProps = {
 	topicTitle: string;
+	emotion: TeacherEmotion;
+	intensity?: EmotionIntensity;
+	teacherAudioStream: MediaStream | null;
 	onEndCall: () => void;
 	onToggleMute?: () => void;
 };
@@ -29,9 +36,13 @@ const INITIAL_CONTROLS: CallControlState = {
 
 export function CallConnectedView({
 	topicTitle,
+	emotion,
+	intensity = DEFAULT_TEACHER_FACE_INTENSITY,
+	teacherAudioStream,
 	onEndCall,
 	onToggleMute,
 }: CallConnectedViewProps) {
+	const speech = useTeacherSpeechLevel(teacherAudioStream);
 	const sessionSeconds = useSessionTimer();
 	const [controls, setControls] = useState(INITIAL_CONTROLS);
 	const [showEndModal, setShowEndModal] = useState(false);
@@ -46,6 +57,9 @@ export function CallConnectedView({
 			<CallStatusBar topicTitle={topicTitle} sessionSeconds={sessionSeconds} />
 			<div className="callStageWrap">
 				<CallStage
+					emotion={emotion}
+					intensity={intensity}
+					speech={speech}
 					isMuted={controls.isMuted}
 					isPanelOpen={controls.isPanelOpen}
 					onToggleMute={() => {

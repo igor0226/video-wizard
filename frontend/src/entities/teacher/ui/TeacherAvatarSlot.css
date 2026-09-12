@@ -15,7 +15,7 @@
 }
 
 .teacherSlot-call-stage {
-	@apply h-full w-full rounded-2xl;
+	@apply aspect-square h-auto w-full max-h-[min(32rem,calc(100dvh-11rem))] max-w-[min(32rem,calc(100dvh-11rem))] rounded-2xl border-0 bg-transparent ring-0;
 }
 
 .teacherStatus-idle {
@@ -36,4 +36,12 @@
 
 .teacherStatus-unavailable {
 	@apply border border-border opacity-60;
+}
+
+.teacherSlot-call-stage.teacherStatus-idle,
+.teacherSlot-call-stage.teacherStatus-connecting,
+.teacherSlot-call-stage.teacherStatus-speaking,
+.teacherSlot-call-stage.teacherStatus-listening,
+.teacherSlot-call-stage.teacherStatus-unavailable {
+	@apply border-0 bg-transparent shadow-none ring-0;
 }

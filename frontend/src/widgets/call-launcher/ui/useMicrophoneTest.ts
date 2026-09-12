@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { startLevelPolling } from "@/shared/lib";
 import { mapMicError } from "../utils/map-mic-error";
 import { microphoneStatusLabel } from "../utils/microphone-status-label";
 import {
@@ -9,7 +10,6 @@ import {
 	openMicrophoneMonitor,
 } from "../utils/open-microphone-monitor";
 import { resolveInputLabel } from "../utils/resolve-input-label";
-import { startLevelPolling } from "../utils/start-level-polling";
 
 const HEARD_THRESHOLD = 8;
 

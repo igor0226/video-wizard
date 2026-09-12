@@ -1,7 +1,16 @@
-import { TeacherAvatarSlot } from "@/entities/teacher";
+import {
+	TeacherAvatarSlot,
+	TeacherFace,
+	type TeacherFaceEmotion,
+	type TeacherFaceIntensity,
+	type TeacherFaceSpeech,
+} from "@/entities/teacher";
 import { CallControlDock } from "./CallControlDock";
 
 type CallStageProps = {
+	emotion: TeacherFaceEmotion;
+	intensity: TeacherFaceIntensity;
+	speech: TeacherFaceSpeech;
 	isMuted: boolean;
 	isPanelOpen: boolean;
 	onToggleMute: () => void;
@@ -10,6 +19,9 @@ type CallStageProps = {
 };
 
 export function CallStage({
+	emotion,
+	intensity,
+	speech,
 	isMuted,
 	isPanelOpen,
 	onToggleMute,
@@ -23,7 +35,13 @@ export function CallStage({
 					size="call-stage"
 					status="speaking"
 					fallbackLabel="Elena (AI Instructor)"
-				/>
+				>
+					<TeacherFace
+						emotion={emotion}
+						intensity={intensity}
+						speech={speech}
+					/>
+				</TeacherAvatarSlot>
 			</div>
 			<CallControlDock
 				isMuted={isMuted}

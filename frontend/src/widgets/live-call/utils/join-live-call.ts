@@ -2,6 +2,7 @@ import type {
 	ConnectionStep,
 	CreateCallRequest,
 	CreateCallResponse,
+	TeacherEmotionMessage,
 } from "@/entities/speaking-session";
 
 import { Room } from "livekit-client";
@@ -23,7 +24,8 @@ export async function joinLiveCall(input: {
 	signal: AbortSignal;
 	onStep: (step: ConnectionStep) => void;
 	onCallId: (callId: string) => void;
-	onTeacherAudio: () => void;
+	onTeacherAudio: (stream: MediaStream | null) => void;
+	onTeacherEmotion: (message: TeacherEmotionMessage) => void;
 }): Promise<LiveCallJoinResult> {
 	input.onStep("permissions");
 	const credentials = await loadCredentials(input.attemptKey, input.request);
@@ -31,7 +33,10 @@ export async function joinLiveCall(input: {
 	input.onCallId(credentials.callId);
 
 	const room = new Room();
-	const unbind = bindRoomEvents(room, input.onTeacherAudio);
+	const unbind = bindRoomEvents(room, {
+		onTeacherAudio: input.onTeacherAudio,
+		onTeacherEmotion: input.onTeacherEmotion,
+	});
 	input.onStep("ice_negotiation");
 	await room.connect(credentials.livekitUrl, credentials.token);
 	throwIfAborted(input.signal);

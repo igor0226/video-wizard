@@ -4,7 +4,10 @@ const { createAudioContext } = vi.hoisted(() => ({
 	createAudioContext: vi.fn(),
 }));
 
-vi.mock("./create-audio-context", () => ({ createAudioContext }));
+vi.mock("@/shared/lib", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@/shared/lib")>();
+	return { ...actual, createAudioContext };
+});
 
 function fakeMonitorDeps() {
 	const stopTrack = vi.fn();

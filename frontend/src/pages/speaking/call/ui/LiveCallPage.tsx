@@ -21,13 +21,21 @@ function LiveCallContent() {
 	const topicId = searchParams?.get("topic") ?? SPEAKING_TOPICS[0].id;
 	const topic =
 		SPEAKING_TOPICS.find((item) => item.id === topicId) ?? SPEAKING_TOPICS[0];
-	const { step, phase, errorType, retry, endCall, toggleMic } =
-		useLiveCallConnection({
-			sourceLanguage: "English",
-			explanationLanguage: "English",
-			languageLevel: parseCefrLevel(topic.level),
-			topic: formatSpeakingTopicText(topic),
-		});
+	const {
+		step,
+		phase,
+		errorType,
+		retry,
+		endCall,
+		toggleMic,
+		teacherEmotion,
+		teacherAudioStream,
+	} = useLiveCallConnection({
+		sourceLanguage: "English",
+		explanationLanguage: "English",
+		languageLevel: parseCefrLevel(topic.level),
+		topic: formatSpeakingTopicText(topic),
+	});
 
 	const leaveSpeaking = () => {
 		void endCall().finally(() => router.push("/speaking"));
@@ -37,6 +45,9 @@ function LiveCallContent() {
 		return (
 			<CallConnectedView
 				topicTitle={topic.title}
+				emotion={teacherEmotion.emotion}
+				intensity={teacherEmotion.intensity}
+				teacherAudioStream={teacherAudioStream}
 				onEndCall={leaveSpeaking}
 				onToggleMute={() => {
 					void toggleMic();

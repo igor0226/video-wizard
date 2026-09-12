@@ -64,7 +64,7 @@ Client data fetching uses TanStack Query (poll list/status). Nest API base URL c
 - The response `{ callId, token, livekitUrl }` is used with `livekit-client` `Room.connect`. The browser publishes the microphone and plays the agent's remote audio track.
 - Compose LiveKit must be **v1.9.11+** (repo uses `livekit/livekit-server:v1.13.6`). `livekit-client` 2.17+ connects via `/rtc/v1`; older servers only expose `/rtc` and the browser shows `404 /rtc/v1/validate`.
 - End call `POST`s `/api/speaking/calls/:id/end` then returns to `/speaking`.
-- Teacher facial emotions arrive on the LiveKit data topic `teacher-emotion` (`{ emotion, intensity?, source }`). v1 logs them to the console; do not render teacher SVG emotions yet.
+- Teacher facial emotions arrive on the LiveKit data topic `teacher-emotion` (`{ emotion, intensity?, source }`). The live call applies them to `TeacherFace` as SVG root classes (`emotion-*`, `intensity-*`; intensity defaults to `1`). Speech visemes (`speech-quiet|normal|loud`) come from an `AnalyserNode` on the teacher’s LiveKit `MediaStream` (RMS 0–100), not from the emotion payload. The launcher and connecting views keep `staticMotion`.
 - Transcript and vocabulary panels still use fixtures.
 
 ### Playback

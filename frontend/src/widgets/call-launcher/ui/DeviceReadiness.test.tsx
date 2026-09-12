@@ -12,9 +12,10 @@ vi.mock("../utils/open-microphone-monitor", () => ({
 	openMicrophoneMonitor,
 }));
 
-vi.mock("../utils/start-level-polling", () => ({
-	startLevelPolling,
-}));
+vi.mock("@/shared/lib", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@/shared/lib")>();
+	return { ...actual, startLevelPolling };
+});
 
 function mockSuccessfulMonitor(level = 40) {
 	const stop = vi.fn();

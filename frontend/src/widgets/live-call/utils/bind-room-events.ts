@@ -1,17 +1,29 @@
+import type { TeacherEmotionMessage } from "@/entities/speaking-session";
+
 import {
 	type RemoteParticipant,
 	type RemoteTrack,
 	type RemoteTrackPublication,
 	type Room,
 	RoomEvent,
+	Track,
 } from "livekit-client";
 
 import { attachRemoteAudio, detachRemoteAudio } from "./attach-remote-audio";
-import { logTeacherEmotion } from "./log-teacher-emotion";
+import {
+	dispatchTeacherEmotion,
+	resolveDataTopic,
+} from "./dispatch-teacher-emotion";
+import { resolveTeacherAudioStream } from "./resolve-teacher-audio-stream";
+
+export type RoomEventHandlers = {
+	onTeacherAudio: (stream: MediaStream | null) => void;
+	onTeacherEmotion: (message: TeacherEmotionMessage) => void;
+};
 
 export function bindRoomEvents(
 	room: Room,
-	onTeacherAudio: () => void,
+	handlers: RoomEventHandlers,
 ): () => void {
 	const onSubscribed = (
 		track: RemoteTrack,
@@ -22,18 +34,25 @@ export function bindRoomEvents(
 			return;
 		}
 		void room.startAudio();
-		onTeacherAudio();
+		handlers.onTeacherAudio(resolveTeacherAudioStream(track));
 	};
 	const onUnsubscribed = (track: RemoteTrack) => {
 		detachRemoteAudio(track);
+		if (track.kind === Track.Kind.Audio) {
+			handlers.onTeacherAudio(null);
+		}
 	};
 	const onData = (
 		payload: Uint8Array,
 		_p?: RemoteParticipant,
-		_k?: unknown,
+		kindOrTopic?: unknown,
 		topic?: string,
 	) => {
-		logTeacherEmotion(payload, topic);
+		dispatchTeacherEmotion(
+			payload,
+			resolveDataTopic(kindOrTopic, topic),
+			handlers.onTeacherEmotion,
+		);
 	};
 	const onPlayback = () => {
 		if (!room.canPlaybackAudio) {
@@ -56,7 +75,7 @@ export function bindRoomEvents(
 
 export function attachExistingRemoteAudio(
 	room: Room,
-	onTeacherAudio: () => void,
+	onTeacherAudio: (stream: MediaStream | null) => void,
 ): void {
 	for (const participant of room.remoteParticipants.values()) {
 		for (const publication of participant.trackPublications.values()) {
@@ -64,7 +83,7 @@ export function attachExistingRemoteAudio(
 				continue;
 			}
 			void room.startAudio();
-			onTeacherAudio();
+			onTeacherAudio(resolveTeacherAudioStream(publication.track));
 		}
 	}
 }

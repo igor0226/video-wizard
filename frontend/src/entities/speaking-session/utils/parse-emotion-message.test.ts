@@ -21,6 +21,12 @@ describe("parseEmotionMessage", () => {
 		).toEqual({ emotion: "thoughtful", source: "reaction" });
 	});
 
+	it("defaults a missing source and accepts string intensity", () => {
+		expect(
+			parseEmotionMessage(encode({ emotion: "angry", intensity: "3" })),
+		).toEqual({ emotion: "angry", intensity: 3, source: "reply" });
+	});
+
 	it("returns null for invalid JSON, emotion, or source", () => {
 		expect(parseEmotionMessage(new TextEncoder().encode("{"))).toBeNull();
 		expect(

@@ -1,4 +1,4 @@
-import { createAudioContext } from "./create-audio-context";
+import { createAudioContext } from "@/shared/lib";
 
 export type MicrophoneMonitor = {
 	stream: MediaStream;
