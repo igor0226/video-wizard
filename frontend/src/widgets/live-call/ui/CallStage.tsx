@@ -1,20 +1,33 @@
-import type { CallControlState } from "@/entities/speaking-session";
-
-import { LIVE_CAPTION } from "@/entities/speaking-session";
-import { TeacherAvatarSlot } from "@/entities/teacher";
+import {
+	TeacherAvatarSlot,
+	TeacherFace,
+	type TeacherFaceEmotion,
+	type TeacherFaceIntensity,
+	type TeacherFaceSpeech,
+} from "@/entities/teacher";
 import { CallControlDock } from "./CallControlDock";
-import { LiveCaptions } from "./LiveCaptions";
-import { SelfViewPreview } from "./SelfViewPreview";
 
 type CallStageProps = {
-	controls: CallControlState;
-	onToggle: (
-		key: "isMuted" | "isVideoOff" | "isCaptionsOn" | "isPanelOpen",
-	) => void;
+	emotion: TeacherFaceEmotion;
+	intensity: TeacherFaceIntensity;
+	speech: TeacherFaceSpeech;
+	isMuted: boolean;
+	isPanelOpen: boolean;
+	onToggleMute: () => void;
+	onTogglePanel: () => void;
 	onEndCall: () => void;
 };
 
-export function CallStage({ controls, onToggle, onEndCall }: CallStageProps) {
+export function CallStage({
+	emotion,
+	intensity,
+	speech,
+	isMuted,
+	isPanelOpen,
+	onToggleMute,
+	onTogglePanel,
+	onEndCall,
+}: CallStageProps) {
 	return (
 		<div className="callStage">
 			<div className="callStageCanvas">
@@ -22,19 +35,19 @@ export function CallStage({ controls, onToggle, onEndCall }: CallStageProps) {
 					size="call-stage"
 					status="speaking"
 					fallbackLabel="Elena (AI Instructor)"
-				/>
-				<SelfViewPreview
-					isCameraOff={controls.isVideoOff}
-					isMuted={controls.isMuted}
-				/>
-				<LiveCaptions text={LIVE_CAPTION} visible={controls.isCaptionsOn} />
+				>
+					<TeacherFace
+						emotion={emotion}
+						intensity={intensity}
+						speech={speech}
+					/>
+				</TeacherAvatarSlot>
 			</div>
 			<CallControlDock
-				controls={controls}
-				onToggleMute={() => onToggle("isMuted")}
-				onToggleCamera={() => onToggle("isVideoOff")}
-				onToggleCaptions={() => onToggle("isCaptionsOn")}
-				onTogglePanel={() => onToggle("isPanelOpen")}
+				isMuted={isMuted}
+				isPanelOpen={isPanelOpen}
+				onToggleMute={onToggleMute}
+				onTogglePanel={onTogglePanel}
 				onEndCall={onEndCall}
 			/>
 		</div>

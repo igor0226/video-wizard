@@ -15,6 +15,7 @@ describe("Speaking calls (e2e)", () => {
 		createRoom: vi.fn(async () => undefined),
 		deleteRoom: vi.fn(async () => undefined),
 		removeParticipant: vi.fn(async () => undefined),
+		roomExists: vi.fn(async () => true),
 	};
 	const dispatch = {
 		createDispatch: vi.fn(async () => ({ id: "disp-1" })),

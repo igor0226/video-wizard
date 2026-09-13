@@ -2,12 +2,15 @@
 
 import type {
 	CallControlState,
+	EmotionIntensity,
 	SavedPhrase,
+	TeacherEmotion,
 } from "@/entities/speaking-session";
 
 import { useState } from "react";
 
-import { SAVED_PHRASES, TRANSCRIPT_FIXTURE } from "@/entities/speaking-session";
+import { SAVED_PHRASES } from "@/entities/speaking-session";
+import { DEFAULT_TEACHER_FACE_INTENSITY } from "@/entities/teacher";
 import { saveCallPhrase } from "@/features/save-call-phrase";
 import { CallStage } from "./CallStage";
 import { CallStatusBar } from "./CallStatusBar";
@@ -15,34 +18,38 @@ import { EndCallDialog } from "./EndCallDialog";
 import { StudyDrawer } from "./StudyDrawer";
 import { useCallShortcuts } from "./useCallShortcuts";
 import { useSessionTimer } from "./useSessionTimer";
+import { useTeacherSpeechLevel } from "./useTeacherSpeechLevel";
 
 type CallConnectedViewProps = {
 	topicTitle: string;
+	emotion: TeacherEmotion;
+	intensity?: EmotionIntensity;
+	teacherAudioStream: MediaStream | null;
 	onEndCall: () => void;
 	onToggleMute?: () => void;
 };
 
 const INITIAL_CONTROLS: CallControlState = {
 	isMuted: false,
-	isVideoOff: false,
-	isCaptionsOn: true,
 	isPanelOpen: true,
-	activePanelTab: "transcript",
 };
 
 export function CallConnectedView({
 	topicTitle,
+	emotion,
+	intensity = DEFAULT_TEACHER_FACE_INTENSITY,
+	teacherAudioStream,
 	onEndCall,
 	onToggleMute,
 }: CallConnectedViewProps) {
-	const [sessionSeconds, setSessionSeconds] = useState(258);
+	const speech = useTeacherSpeechLevel(teacherAudioStream);
+	const sessionSeconds = useSessionTimer();
 	const [controls, setControls] = useState(INITIAL_CONTROLS);
 	const [showEndModal, setShowEndModal] = useState(false);
 	const [savedPhrases, setSavedPhrases] =
 		useState<SavedPhrase[]>(SAVED_PHRASES);
 	const [newPhrase, setNewPhrase] = useState("");
 
-	useSessionTimer(setSessionSeconds);
 	useCallShortcuts(setControls, () => setShowEndModal(true), onToggleMute);
 
 	return (
@@ -50,27 +57,30 @@ export function CallConnectedView({
 			<CallStatusBar topicTitle={topicTitle} sessionSeconds={sessionSeconds} />
 			<div className="callStageWrap">
 				<CallStage
-					controls={controls}
-					onToggle={(key) => {
-						if (key === "isMuted") {
-							onToggleMute?.();
-						}
+					emotion={emotion}
+					intensity={intensity}
+					speech={speech}
+					isMuted={controls.isMuted}
+					isPanelOpen={controls.isPanelOpen}
+					onToggleMute={() => {
+						onToggleMute?.();
 						setControls((current) => ({
 							...current,
-							[key]: !current[key],
+							isMuted: !current.isMuted,
 						}));
 					}}
+					onTogglePanel={() =>
+						setControls((current) => ({
+							...current,
+							isPanelOpen: !current.isPanelOpen,
+						}))
+					}
 					onEndCall={() => setShowEndModal(true)}
 				/>
 				{controls.isPanelOpen ? (
 					<StudyDrawer
-						segments={TRANSCRIPT_FIXTURE}
 						phrases={savedPhrases}
 						newPhrase={newPhrase}
-						activeTab={controls.activePanelTab}
-						onTabChange={(tab) =>
-							setControls((current) => ({ ...current, activePanelTab: tab }))
-						}
 						onNewPhraseChange={setNewPhrase}
 						onSavePhrase={(term) => {
 							const next = saveCallPhrase(term, sessionSeconds, savedPhrases);

@@ -15,7 +15,7 @@
 }
 
 .teacherSlot-call-stage {
-	@apply h-full w-full rounded-2xl;
+	@apply aspect-square h-auto w-full max-h-[min(32rem,calc(100dvh-11rem))] max-w-[min(32rem,calc(100dvh-11rem))] rounded-2xl border-0 bg-transparent ring-0;
 }
 
 .teacherStatus-idle {
@@ -38,6 +38,10 @@
 	@apply border border-border opacity-60;
 }
 
-.teacherSlotBadge {
-	@apply absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full border border-border bg-background/80 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm;
+.teacherSlot-call-stage.teacherStatus-idle,
+.teacherSlot-call-stage.teacherStatus-connecting,
+.teacherSlot-call-stage.teacherStatus-speaking,
+.teacherSlot-call-stage.teacherStatus-listening,
+.teacherSlot-call-stage.teacherStatus-unavailable {
+	@apply border-0 bg-transparent shadow-none ring-0;
 }

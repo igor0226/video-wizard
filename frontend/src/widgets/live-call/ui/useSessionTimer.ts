@@ -1,12 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export function useSessionTimer(
-	setSeconds: (updater: (value: number) => number) => void,
-) {
-	useEffect(() => {
-		const interval = window.setInterval(() => {
-			setSeconds((value) => value + 1);
-		}, 1000);
-		return () => window.clearInterval(interval);
-	}, [setSeconds]);
+import { startElapsedClock } from "../utils/start-elapsed-clock";
+
+export function useSessionTimer(): number {
+	const startedAtMs = useRef(readMonotonicMs());
+	const [seconds, setSeconds] = useState(0);
+
+	useEffect(
+		() => startElapsedClock(startedAtMs.current, readMonotonicMs, setSeconds),
+		[],
+	);
+
+	return seconds;
+}
+
+function readMonotonicMs(): number {
+	return performance.now();
 }

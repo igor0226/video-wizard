@@ -4,6 +4,7 @@ import type { Room } from "livekit-client";
 import type {
 	ConnectionStep,
 	CreateCallRequest,
+	TeacherEmotionMessage,
 } from "@/entities/speaking-session";
 
 import {
@@ -24,6 +25,10 @@ type LiveCallPhase = "connecting" | "connected" | "error";
 type LiveCallErrorType = "mic_denied" | "network_timeout";
 
 const CONNECT_TIMEOUT_MS = 15000;
+const IDLE_TEACHER_EMOTION: TeacherEmotionMessage = {
+	emotion: "neutral",
+	source: "reply",
+};
 
 export function useLiveCallConnection(
 	request: Omit<CreateCallRequest, "userId">,
@@ -35,6 +40,10 @@ export function useLiveCallConnection(
 	const [callId, setCallId] = useState<string | null>(null);
 	const [room, setRoom] = useState<Room | null>(null);
 	const [attempt, setAttempt] = useState(0);
+	const [teacherEmotion, setTeacherEmotion] =
+		useState<TeacherEmotionMessage>(IDLE_TEACHER_EMOTION);
+	const [teacherAudioStream, setTeacherAudioStream] =
+		useState<MediaStream | null>(null);
 	const roomRef = useRef<Room | null>(null);
 	const callIdRef = useRef<string | null>(null);
 	const unbindRef = useRef<() => void>(() => {});
@@ -48,6 +57,8 @@ export function useLiveCallConnection(
 			setErrorType,
 			setCallId,
 			setRoom,
+			setTeacherEmotion,
+			setTeacherAudioStream,
 			roomRef,
 			callIdRef,
 			unbindRef,
@@ -65,13 +76,26 @@ export function useLiveCallConnection(
 		setPhase("connecting");
 		setCallId(null);
 		setRoom(null);
+		setTeacherEmotion(IDLE_TEACHER_EMOTION);
+		setTeacherAudioStream(null);
 		setAttempt((current) => current + 1);
 	}, []);
 
 	const endCall = useCallback(() => leaveCall(roomRef, callIdRef), []);
 	const toggleMic = useCallback(() => toggleMicrophone(roomRef.current), []);
 
-	return { step, phase, errorType, retry, room, callId, endCall, toggleMic };
+	return {
+		step,
+		phase,
+		errorType,
+		retry,
+		room,
+		callId,
+		teacherEmotion,
+		teacherAudioStream,
+		endCall,
+		toggleMic,
+	};
 }
 
 function startConnection(input: {
@@ -82,6 +106,8 @@ function startConnection(input: {
 	setErrorType: (errorType: LiveCallErrorType) => void;
 	setCallId: (callId: string | null) => void;
 	setRoom: (room: Room | null) => void;
+	setTeacherEmotion: (message: TeacherEmotionMessage) => void;
+	setTeacherAudioStream: (stream: MediaStream | null) => void;
 	roomRef: MutableRefObject<Room | null>;
 	callIdRef: MutableRefObject<string | null>;
 	unbindRef: MutableRefObject<() => void>;
@@ -103,11 +129,15 @@ function startConnection(input: {
 		window.clearTimeout(timeoutId);
 	};
 
+	input.setTeacherEmotion(IDLE_TEACHER_EMOTION);
+	input.setTeacherAudioStream(null);
+
 	void runJoin(
 		input,
 		controller,
-		() => {
-			if (settled) {
+		(stream) => {
+			input.setTeacherAudioStream(stream);
+			if (!stream || settled) {
 				return;
 			}
 			markSettled();
@@ -132,7 +162,7 @@ function startConnection(input: {
 async function runJoin(
 	input: Parameters<typeof startConnection>[0],
 	controller: AbortController,
-	onTeacherAudio: () => void,
+	onTeacherAudio: (stream: MediaStream | null) => void,
 	onFailure: () => void,
 ): Promise<void> {
 	try {
@@ -146,6 +176,7 @@ async function runJoin(
 				input.setCallId(id);
 			},
 			onTeacherAudio,
+			onTeacherEmotion: input.setTeacherEmotion,
 		});
 		if (controller.signal.aborted) {
 			joined.unbind();

@@ -39,5 +39,5 @@
 	--input: 217 19% 20%;
 	--ring: 0 0% 96%;
 
-	@apply min-h-screen bg-background text-foreground;
+	@apply h-dvh max-h-dvh overflow-hidden bg-background text-foreground;
 }

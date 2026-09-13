@@ -18,14 +18,15 @@ export function parseEmotionMessage(
 	if (!isRecord(parsed) || !isTeacherEmotion(parsed.emotion)) {
 		return null;
 	}
-	if (!isEmotionSource(parsed.source)) {
+	const source = resolveEmotionSource(parsed.source);
+	if (!source) {
 		return null;
 	}
 	const intensity = parseIntensity(parsed.intensity);
 	if (intensity === undefined) {
-		return { emotion: parsed.emotion, source: parsed.source };
+		return { emotion: parsed.emotion, source };
 	}
-	return { emotion: parsed.emotion, source: parsed.source, intensity };
+	return { emotion: parsed.emotion, source, intensity };
 }
 
 function decodeJson(payload: Uint8Array): unknown {
@@ -43,16 +44,23 @@ function isTeacherEmotion(value: unknown): value is TeacherEmotion {
 	);
 }
 
-function isEmotionSource(value: unknown): value is EmotionSource {
-	return typeof value === "string" && SOURCES.includes(value as EmotionSource);
+function resolveEmotionSource(value: unknown): EmotionSource | null {
+	if (value === undefined) {
+		return "reply";
+	}
+	if (typeof value === "string" && SOURCES.includes(value as EmotionSource)) {
+		return value as EmotionSource;
+	}
+	return null;
 }
 
 function parseIntensity(value: unknown): EmotionIntensity | undefined {
+	const intensity = typeof value === "string" ? Number(value) : value;
 	if (
-		typeof value !== "number" ||
-		!INTENSITIES.has(value as EmotionIntensity)
+		typeof intensity !== "number" ||
+		!INTENSITIES.has(intensity as EmotionIntensity)
 	) {
 		return undefined;
 	}
-	return value as EmotionIntensity;
+	return intensity as EmotionIntensity;
 }

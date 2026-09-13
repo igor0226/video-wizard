@@ -4,7 +4,7 @@ import {
 	CONNECTION_ERRORS,
 	CONNECTION_STEPS,
 } from "@/entities/speaking-session";
-import { TeacherAvatarSlot } from "@/entities/teacher";
+import { TeacherAvatarSlot, TeacherFace } from "@/entities/teacher";
 import { Button } from "@/shared/ui/button";
 import { CallConnectionError } from "./CallConnectionError";
 import { ConnectingSteps } from "./ConnectingSteps";
@@ -39,12 +39,9 @@ export function CallConnectingView({
 			</div>
 			<div className="mx-auto w-full max-w-md space-y-8 text-center">
 				<div className="flex flex-col items-center">
-					<TeacherAvatarSlot
-						size="lg"
-						status="connecting"
-						fallbackLabel="Elena · AI Instructor"
-						className="mb-4"
-					/>
+					<TeacherAvatarSlot size="lg" status="connecting" className="mb-4">
+						<TeacherFace staticMotion />
+					</TeacherAvatarSlot>
 					<h2 className="text-xl font-bold">Connecting to AI Instructor</h2>
 					<p
 						className="mt-1 text-xs text-muted-foreground"

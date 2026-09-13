@@ -20,7 +20,6 @@ export { useSpeakingCalls } from "./api/useSpeakingCalls";
 export {
 	CONNECTION_ERRORS,
 	CONNECTION_STEPS,
-	LIVE_CAPTION,
 	SAVED_PHRASES,
 	SPEAKING_TOPICS,
 	TRANSCRIPT_FIXTURE,

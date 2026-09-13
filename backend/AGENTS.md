@@ -174,9 +174,14 @@ Self-hosted LiveKit (`livekit` in Compose) plus a Node agent worker (`teacher-ag
 - `GET /api/speaking/calls/:id?userId=` — owner-scoped call status.
 - `POST /api/speaking/calls/:id/end` — owner-scoped end; deletes the LiveKit room and marks the call `ended`.
 - `POST /api/speaking/livekit/webhook` — LiveKit `room_finished` / `participant_left` reconciliation.
+- Stale-call cron (`StaleCallWorkerService`) marks leftover `active` calls as `failed` (`endedReason: stale_room_missing`) when they are older than the grace period and the LiveKit room is gone.
 - Agent publishes teacher audio into the room and emotion JSON on data topic `teacher-emotion` (`source: "reply" | "reaction"`).
 
-Env: `LIVEKIT_URL` (browser-facing), `LIVEKIT_API_URL` (Nest Room/Dispatch API, defaults to `http` form of `LIVEKIT_URL`), `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `SPEAKING_AGENT_NAME`, `SPEAKING_TEACHER_MODEL`, `SPEAKING_TEACHER_VOICE`, `SPEAKING_CALL_TOKEN_TTL`, `SPEAKING_EMPTY_ROOM_TIMEOUT_SECONDS`.
+Env: `LIVEKIT_URL` (browser-facing), `LIVEKIT_API_URL` (Nest Room/Dispatch API, defaults to `http` form of `LIVEKIT_URL`), `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `SPEAKING_AGENT_NAME`, `SPEAKING_TEACHER_MODEL`, `SPEAKING_TEACHER_VOICE`, `SPEAKING_CALL_TOKEN_TTL`, `SPEAKING_EMPTY_ROOM_TIMEOUT_SECONDS`, `SPEAKING_STALE_CALL_CRON_ENABLED`, `SPEAKING_STALE_CALL_CRON`, `SPEAKING_STALE_CALL_GRACE_SECONDS`.
+
+- `SPEAKING_STALE_CALL_CRON_ENABLED` — set to `false` to skip stale-call cron and the startup tick (used in tests). Default: enabled (`true` in `.env.example`).
+- `SPEAKING_STALE_CALL_CRON` — cron expression for the stale-call sweep (default every minute).
+- `SPEAKING_STALE_CALL_GRACE_SECONDS` — ignore `active` calls younger than this (default `120`) so create/setup is not raced.
 
 ## Validation
 

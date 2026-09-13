@@ -7,6 +7,14 @@ import type {
 
 export const SPEAKING_TOPICS: CallTopic[] = [
 	{
+		id: "topic-2",
+		title: "A simple conversation about life, work, and hobbies",
+		level: "B1-B2",
+		description: "Have a simple conversation about life, work, and hobbies.",
+		suggestedDurationMins: 10,
+		tags: ["Everyday", "Life"],
+	},
+	{
 		id: "topic-1",
 		title: "Job Interview: Technical & Product Communication",
 		level: "B2-C1",
@@ -14,15 +22,6 @@ export const SPEAKING_TOPICS: CallTopic[] = [
 			"Practice answering complex behavioral and technical architecture questions in a professional setting.",
 		suggestedDurationMins: 15,
 		tags: ["Professional", "Tech", "Fluency"],
-	},
-	{
-		id: "topic-2",
-		title: "Travel Situations: Airport & Hotel Check-in",
-		level: "A2-B1",
-		description:
-			"Navigate real-world travel hiccups, booking adjustments, and conversational courtesies.",
-		suggestedDurationMins: 10,
-		tags: ["Everyday", "Travel"],
 	},
 	{
 		id: "topic-3",
@@ -101,6 +100,3 @@ export const SAVED_PHRASES: SavedPhrase[] = [
 		savedAt: "14:26",
 	},
 ];
-
-export const LIVE_CAPTION =
-	"Could you walk me through a challenging technical tradeoff you managed recently?";

@@ -60,10 +60,7 @@ export type SavedPhrase = {
 
 export type CallControlState = {
 	isMuted: boolean;
-	isVideoOff: boolean;
-	isCaptionsOn: boolean;
 	isPanelOpen: boolean;
-	activePanelTab: "transcript" | "vocabulary";
 };
 
 export type ConnectionStep =

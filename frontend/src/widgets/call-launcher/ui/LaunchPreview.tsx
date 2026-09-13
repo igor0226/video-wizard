@@ -2,7 +2,7 @@ import type { CallTopic } from "@/entities/speaking-session";
 
 import { Play } from "lucide-react";
 
-import { TeacherAvatarSlot } from "@/entities/teacher";
+import { TeacherAvatarSlot, TeacherFace } from "@/entities/teacher";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent } from "@/shared/ui/card";
 
@@ -17,12 +17,9 @@ export function LaunchPreview({ topic, onStartCall }: LaunchPreviewProps) {
 			<CardContent className="flex h-full flex-col justify-between p-6">
 				<div className="space-y-5 text-center">
 					<div className="flex flex-col items-center">
-						<TeacherAvatarSlot
-							size="lg"
-							status="idle"
-							fallbackLabel="Elena · AI Instructor"
-							className="mb-3"
-						/>
+						<TeacherAvatarSlot size="lg" status="idle" className="mb-3">
+							<TeacherFace staticMotion />
+						</TeacherAvatarSlot>
 						<div className="text-sm font-bold">Elena (AI Language Teacher)</div>
 					</div>
 					<div className="space-y-2 border-t border-border pt-4 text-left text-xs">

@@ -1,12 +1,13 @@
 "use client";
 
-import { CheckCircle2, Mic } from "lucide-react";
-import { useState } from "react";
+import { AlertCircle, CheckCircle2, Mic } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
+import { MicLevelMeter } from "./MicLevelMeter";
+import { useMicrophoneTest } from "./useMicrophoneTest";
 
 export function DeviceReadiness() {
-	const [isMicTesting, setIsMicTesting] = useState(false);
+	const mic = useMicrophoneTest();
 
 	return (
 		<div className="space-y-3 rounded-xl border border-border bg-muted p-4">
@@ -18,10 +19,16 @@ export function DeviceReadiness() {
 					<div>
 						<div className="flex items-center gap-1.5 text-xs font-semibold">
 							Microphone Status
-							<CheckCircle2 className="h-3.5 w-3.5" />
+							<StatusIcon
+								hasError={Boolean(mic.error)}
+								heardInput={mic.heardInput}
+							/>
 						</div>
-						<p className="font-mono text-[11px] text-muted-foreground">
-							Default System Input · Ready
+						<p
+							className="font-mono text-[11px] text-muted-foreground"
+							aria-live="polite"
+						>
+							{mic.statusLabel}
 						</p>
 					</div>
 				</div>
@@ -29,19 +36,29 @@ export function DeviceReadiness() {
 					type="button"
 					variant="outline"
 					size="sm"
-					onClick={() => setIsMicTesting((value) => !value)}
+					disabled={mic.isStarting}
+					onClick={mic.toggle}
 				>
-					{isMicTesting ? "Stop Audio Check" : "Test Audio Level"}
+					{mic.isTesting ? "Stop Audio Check" : "Test Audio Level"}
 				</Button>
 			</div>
-			{isMicTesting ? (
-				<div className="micMeter" role="img" aria-label="Input gain level">
-					<div className="h-full w-1/4 rounded-sm bg-foreground" />
-					<div className="h-full w-1/4 rounded-sm bg-foreground" />
-					<div className="h-full w-1/4 rounded-sm bg-foreground/60" />
-					<div className="h-full w-1/4 rounded-sm bg-muted-foreground/30" />
-				</div>
-			) : null}
+			{mic.isTesting ? <MicLevelMeter level={mic.level} /> : null}
 		</div>
 	);
+}
+
+function StatusIcon({
+	hasError,
+	heardInput,
+}: {
+	hasError: boolean;
+	heardInput: boolean;
+}) {
+	if (hasError) {
+		return <AlertCircle className="h-3.5 w-3.5 text-destructive" />;
+	}
+	if (heardInput) {
+		return <CheckCircle2 className="h-3.5 w-3.5" />;
+	}
+	return null;
 }
