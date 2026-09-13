@@ -5,10 +5,6 @@ import type {
 } from "../model/teacher-face";
 
 import { logTeacherEmotionMismatch } from "@/shared/lib";
-import {
-	readTeacherFaceExpression,
-	teacherFaceMatches,
-} from "./read-teacher-face-expression";
 
 export function logTeacherFaceApplyResult(
 	svg: Element | null,
@@ -21,12 +17,4 @@ export function logTeacherFaceApplyResult(
 		logTeacherEmotionMismatch({ reason: "svg-missing", expected });
 		return;
 	}
-	if (teacherFaceMatches(svg, emotion, intensity, speech)) {
-		return;
-	}
-	logTeacherEmotionMismatch({
-		reason: "svg-class",
-		expected,
-		actual: readTeacherFaceExpression(svg),
-	});
 }

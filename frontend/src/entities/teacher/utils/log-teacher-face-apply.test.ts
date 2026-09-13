@@ -15,20 +15,6 @@ describe("logTeacherFaceApplyResult", () => {
 		expect(warn).not.toHaveBeenCalled();
 	});
 
-	it("warns when the SVG classes do not match", () => {
-		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-		const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-		svg.setAttribute("class", "emotion-neutral intensity-1 speech-silent");
-
-		logTeacherFaceApplyResult(svg, "laugh", 3, "loud");
-
-		expect(warn).toHaveBeenCalledWith("teacher-emotion-mismatch", {
-			reason: "svg-class",
-			expected: { emotion: "laugh", intensity: 3, speech: "loud" },
-			actual: { emotion: "neutral", intensity: "1", speech: "silent" },
-		});
-	});
-
 	it("warns when the SVG root is missing", () => {
 		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
